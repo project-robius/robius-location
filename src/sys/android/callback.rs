@@ -1,59 +1,49 @@
-use std::{marker::PhantomData, mem::transmute, sync::OnceLock};
+use std::{
+    marker::PhantomData,
+    mem::transmute,
+    sync::{OnceLock, Weak},
+};
 
 use jni::{
     objects::{GlobalRef, JClass, JObject, JValueGen},
     sys::jlong,
     JNIEnv, NativeMethod,
 };
-use tokio::sync::oneshot;
 
 use crate::{Error, Handler, Result};
 
 const AUTHENTICATION_CALLBACK_BYTECODE: &[u8] =
     include_bytes!(concat!(env!("OUT_DIR"), "/classes.dex"));
 
-type ChannelData = Result<()>;
-
-pub(super) type Receiver = oneshot::Receiver<ChannelData>;
-pub(super) type Sender = oneshot::Sender<ChannelData>;
-
-pub(super) fn channel() -> (Sender, Receiver) {
-    oneshot::channel()
-}
-
 // NOTE: This must be kept in sync with the signature of `rust_callback`.
-const RUST_CALLBACK_SIGNATURE: &str = "(JJJLandroid/location/Location;)V";
+const RUST_CALLBACK_SIGNATURE: &str = "(JJLandroid/location/Location;)V";
 
 // NOTE: The signature of this function must be kept in sync with
 // `RUST_CALLBACK_SIGNATURE`.
 unsafe extern "C" fn rust_callback<'a>(
     env: JNIEnv<'a>,
     _: JObject<'a>,
-    handler_ptr: jlong,
-    handler_fn_ptr: jlong,
-    handler_err_fn_ptr: jlong,
+    weak_ptr_high: jlong,
+    weak_ptr_low: jlong,
     location: JObject<'a>,
 ) {
     // TODO: 32-bit? What's that?
 
-    // FIXME: What if dropped on main thread?
+    let weak_ptr: *const super::InnerHandler =
+        unsafe { std::mem::transmute([weak_ptr_high, weak_ptr_low]) };
+    let weak = unsafe { Weak::from_raw(weak_ptr) };
 
-    let handler: &mut () = unsafe { transmute(handler_ptr) };
-    // TODO: Note that this MUST be kept in sync with the handler function signature
-    // :) Would be nice if we could somehow statically check this at compile
-    // time.
-    let handler_fn: for<'b> fn(&mut (), crate::Location<'b>) = unsafe { transmute(handler_fn_ptr) };
-    // let handler_err_fn = unsafe { transmute(handler_err_fn_ptr) };
-
-    handler_fn(
-        handler,
-        crate::Location {
-            inner: super::Location {
-                inner: env.new_global_ref(location).unwrap(),
-                phantom: PhantomData,
-            },
-        },
-    )
+    if let Some(mutex) = weak.upgrade() {
+        if let Ok(handler) = mutex.lock() {
+            let location = crate::Location {
+                inner: super::Location {
+                    inner: env.new_global_ref(location).unwrap(),
+                    phantom: PhantomData,
+                },
+            };
+            handler.handle(location);
+        }
+    }
 }
 
 static CALLBACK_CLASS: OnceLock<GlobalRef> = OnceLock::new();

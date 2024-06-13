@@ -11,8 +11,10 @@ use icrate::{
 use super::Location;
 use crate::Handler;
 
+type InnerHandler = dyn Handler;
+
 pub(super) struct Ivars {
-    handler: Box<dyn Handler>,
+    handler: Box<InnerHandler>,
 }
 
 declare_class!(
@@ -31,10 +33,10 @@ declare_class!(
     unsafe impl Delegate {
         #[method_id(initWithHandler:)]
         fn init_with(this: Allocated<Self>, cursed: [usize; 2]) -> Option<Id<Self>> {
+            // FIXME TODO NOTE XXX: :P
+            let ptr: *mut InnerHandler = unsafe { std::mem::transmute(cursed) };
             let this = this.set_ivars(Ivars {
-                // FIXME TODO NOTE XXX: :P
-                // Provenance be damned.
-                handler: unsafe { core::mem::transmute(cursed) },
+                handler: unsafe { Box::from_raw(ptr) },
             });
             unsafe { msg_send_id![super(this), init] }
         }
@@ -51,7 +53,7 @@ declare_class!(
             locations: &NSArray<CLLocation>,
         ) {
             let most_recent = locations.last();
-            self.ivars().handler.something(crate::Location {
+            self.ivars().handler.handle(crate::Location {
                 inner: Location {
                     // TODO: Is there guaranteed to be at least one location?
                     inner: most_recent.unwrap(),
@@ -73,7 +75,7 @@ impl Delegate {
         T: Handler,
     {
         let erased: Box<dyn Handler> = Box::new(handler);
-        let ptr = Box::into_raw(erased);
+        let ptr: *mut InnerHandler = Box::into_raw(erased);
         let cursed: [usize; 2] = unsafe { std::mem::transmute(ptr) };
         unsafe { msg_send_id![Self::alloc(), initWithHandler: cursed] }
     }

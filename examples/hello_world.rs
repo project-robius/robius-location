@@ -18,5 +18,5 @@ fn main() {
     println!("b");
     manager.request_authorization();
     println!("c");
-    // manager.request_location();
+    manager.update_once();
 }

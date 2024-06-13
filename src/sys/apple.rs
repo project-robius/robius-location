@@ -2,11 +2,10 @@ mod delegate;
 
 use delegate::Delegate;
 use icrate::{
-    objc2::{rc::Id, runtime::ProtocolObject, Message},
+    objc2::{rc::Id, runtime::ProtocolObject},
     CoreLocation::{
         CLLocation, CLLocationCoordinate2D, CLLocationManager, CLLocationManagerDelegate,
     },
-    Foundation::NSObjectProtocol,
 };
 
 use crate::{Coordinates, Handler};

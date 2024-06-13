@@ -6,19 +6,17 @@ import android.location.Location;
 import java.util.function.Consumer;
 
 public class LocationCallback implements Consumer<Location> {
-  private long handlerPtr;
-  private long handlerFnPtr;
-  private long handlerErrFnPtr;
+  private long weakPtrHigh;
+  private long weakPtrLow;
 
-  private native void rustCallback(long handlerPtr, long handlerFnPtr, long HandlerErrFnPtr, Location location);
+  private native void rustCallback(long weakPtrHigh, long weakPtrLow, Location location);
 
-  public LocationCallback(long handlerPtr, long handlerFnPtr, long handlerErrFnPtr) {
-    this.handlerPtr = handlerPtr;
-    this.handlerFnPtr = handlerFnPtr;
-    this.handlerErrFnPtr = handlerErrFnPtr;
+  public LocationCallback(long weakPtrHigh, long weakPtrLow) {
+    this.weakPtrHigh = weakPtrHigh;
+    this.weakPtrLow = weakPtrLow;
   }
 
   public void accept(Location location) {
-    rustCallback(this.handlerPtr, this.handlerFnPtr, this.handlerErrFnPtr, location);
+    rustCallback(this.weakPtrHigh, this.weakPtrLow, location);
   }
 }

@@ -1,18 +1,20 @@
 mod callback;
-use std::marker::PhantomData;
+use std::{
+    marker::PhantomData,
+    sync::{Arc, Mutex},
+};
 
 use jni::objects::{GlobalRef, JClass, JObject, JValueGen};
 use makepad_widgets::error;
 
 use crate::{Coordinates, Error, Handler};
 
+type InnerHandler = Mutex<dyn Handler>;
+
 pub struct Manager {
-    handler: Box<dyn Handler>,
-    // TODO: Ideally we could recreate these from the above Box. It should technically be possible
-    // as they are stored in the vtable, but I can't seem to get it to work. We may need to use a
-    // custom vtable rather than a `Box<dyn Handler>`.
-    fn_ptr: i64,
-    err_fn_ptr: i64,
+    // It's fine to use an `std` Mutex in an asynchronous context here, because we can only
+    // encounter contention when dropping, and the guard isn't held across await points.
+    handler: Arc<InnerHandler>,
 }
 
 impl Manager {
@@ -21,9 +23,7 @@ impl Manager {
         T: Handler,
     {
         Manager {
-            handler: Box::new(handler),
-            fn_ptr: T::handle as i64,
-            err_fn_ptr: T::error as i64,
+            handler: Arc::new(Mutex::new(handler)),
         }
     }
 
@@ -80,19 +80,16 @@ impl Manager {
 
             let class = callback::get_callback_class(env).unwrap();
 
-            // 🙃
-            let fat_ptr: [usize; 2] = unsafe { core::mem::transmute(&*self.handler) };
-            // TODO: We are assuming the first component of the fat pointer points to the
-            // struct, and the second points to the vtable.
-            let thin_ptr = fat_ptr[0] as *const () as i64;
+            let weak_ptr: *const InnerHandler = Arc::downgrade(&self.handler).into_raw();
+            // TODO: Is there a better way without the provenance API?
+            let transmuted: [i64; 2] = unsafe { std::mem::transmute(weak_ptr) };
             let consumer = env
                 .new_object(
                     class,
-                    "(JJJ)V",
+                    "(JJ)V",
                     &[
-                        JValueGen::Long(thin_ptr),
-                        JValueGen::Long(self.fn_ptr),
-                        JValueGen::Long(self.err_fn_ptr),
+                        JValueGen::Long(transmuted[0]),
+                        JValueGen::Long(transmuted[1]),
                     ],
                 )
                 .unwrap();
