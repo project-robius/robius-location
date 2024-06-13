@@ -1,6 +1,5 @@
 use std::{
     marker::PhantomData,
-    mem::transmute,
     sync::{OnceLock, Weak},
 };
 
@@ -10,7 +9,7 @@ use jni::{
     JNIEnv, NativeMethod,
 };
 
-use crate::{Error, Handler, Result};
+use crate::Result;
 
 const AUTHENTICATION_CALLBACK_BYTECODE: &[u8] =
     include_bytes!(concat!(env!("OUT_DIR"), "/classes.dex"));

@@ -3,9 +3,13 @@
 package robius.location;
 
 import android.location.Location;
+import android.location.LocationListener;
 import java.util.function.Consumer;
 
-public class LocationCallback implements Consumer<Location> {
+// Consumer<Location> is implemented for getCurrentLocation
+// LocationListener is implemented for requestLocationUpdates
+
+public class LocationCallback implements Consumer<Location>, LocationListener {
   private long weakPtrHigh;
   private long weakPtrLow;
 
@@ -17,6 +21,10 @@ public class LocationCallback implements Consumer<Location> {
   }
 
   public void accept(Location location) {
+    rustCallback(this.weakPtrHigh, this.weakPtrLow, location);
+  }
+
+  public void onLocationChanged(Location location) {
     rustCallback(this.weakPtrHigh, this.weakPtrLow, location);
   }
 }

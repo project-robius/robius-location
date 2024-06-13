@@ -4,17 +4,22 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use jni::objects::{GlobalRef, JClass, JObject, JValueGen};
-use makepad_widgets::error;
+use jni::{
+    objects::{GlobalRef, JObject, JValueGen},
+    JNIEnv,
+};
 
 use crate::{Coordinates, Error, Handler};
 
 type InnerHandler = Mutex<dyn Handler>;
 
 pub struct Manager {
+    callback: GlobalRef,
     // It's fine to use an `std` Mutex in an asynchronous context here, because we can only
     // encounter contention when dropping, and the guard isn't held across await points.
-    handler: Arc<InnerHandler>,
+    //
+    // We store this so that it is not dropped, and the callback can call the handler.
+    _handler: Arc<InnerHandler>,
 }
 
 impl Manager {
@@ -22,14 +27,20 @@ impl Manager {
     where
         T: Handler,
     {
+        let handler: Arc<InnerHandler> = Arc::new(Mutex::new(handler));
         Manager {
-            handler: Arc::new(Mutex::new(handler)),
+            callback: robius_android_env::with_activity(|env, _| {
+                let callback = construct_callback(env, &handler);
+                env.new_global_ref(callback).unwrap()
+            })
+            .unwrap(),
+            _handler: handler,
         }
     }
 
     pub fn request_authorization(&self) {
         robius_android_env::with_activity(|env, current_activity| {
-            const COARSE_PERMISSION: &str = "android.permission.ACCESS_COARSE_LOCATION";
+            // const COARSE_PERMISSION: &str = "android.permission.ACCESS_COARSE_LOCATION";
             const FINE_PERMISSION: &str = "android.permission.ACCESS_FINE_LOCATION";
 
             let permissions = env.new_string(FINE_PERMISSION).unwrap();
@@ -50,49 +61,9 @@ impl Manager {
 
     pub fn update_once(&self) {
         robius_android_env::with_activity(|env, context| {
-            let service_name = env.new_string("location").unwrap();
-
-            std::thread::sleep(std::time::Duration::from_secs(5));
-
-            let manager = env
-                .call_method(
-                    context,
-                    "getSystemService",
-                    "(Ljava/lang/String;)Ljava/lang/Object;",
-                    &[JValueGen::Object(&service_name)],
-                )
-                .unwrap()
-                .l()
-                .unwrap();
-
+            let manager = get_location_manager(env, context);
             let provider = env.new_string("fused").unwrap();
-
-            let executor = env
-                .call_method(
-                    context,
-                    "getMainExecutor",
-                    "()Ljava/util/concurrent/Executor;",
-                    &[],
-                )
-                .unwrap()
-                .l()
-                .unwrap();
-
-            let class = callback::get_callback_class(env).unwrap();
-
-            let weak_ptr: *const InnerHandler = Arc::downgrade(&self.handler).into_raw();
-            // TODO: Is there a better way without the provenance API?
-            let transmuted: [i64; 2] = unsafe { std::mem::transmute(weak_ptr) };
-            let consumer = env
-                .new_object(
-                    class,
-                    "(JJ)V",
-                    &[
-                        JValueGen::Long(transmuted[0]),
-                        JValueGen::Long(transmuted[1]),
-                    ],
-                )
-                .unwrap();
+            let executor = get_executor(env, context);
 
             env.call_method(
                 manager,
@@ -103,7 +74,7 @@ impl Manager {
                     JValueGen::Object(&provider),
                     JValueGen::Object(&JObject::null()),
                     JValueGen::Object(&executor),
-                    JValueGen::Object(&consumer),
+                    JValueGen::Object(&self.callback),
                 ],
             )
             .unwrap();
@@ -111,12 +82,112 @@ impl Manager {
     }
 
     pub fn start_updates(&self) {
-        // todo!();
+        // TODO: What happens if user calls start_updates multiple times?
+
+        // TODO: NoClassDefFoundError for android/lcoation/LocationListener-$CC
+
+        robius_android_env::with_activity(|env, context| {
+            let manager = get_location_manager(env, context);
+            let provider = env.new_string("fused").unwrap();
+            let request = construct_location_request(env);
+            let executor = get_executor(env, context);
+
+            env.call_method(
+                manager,
+                "requestLocationUpdates",
+                "(Ljava/lang/String;Landroid/location/LocationRequest;Ljava/util/concurrent/\
+                 Executor;Landroid/location/LocationListener;)V",
+                &[
+                    JValueGen::Object(&provider),
+                    JValueGen::Object(&request),
+                    JValueGen::Object(&executor),
+                    JValueGen::Object(&self.callback),
+                ],
+            )
+            .unwrap();
+        });
     }
 
     pub fn stop_updates(&self) {
-        // todo!();
+        // TODO: Request flush?
+
+        // TODO: What happens if user calls stop_updates prior to calling start_updates
+
+        robius_android_env::with_activity(|env, context| {
+            let manager = get_location_manager(env, context);
+            env.call_method(
+                manager,
+                "removeUpdates",
+                "(Landroid/location/LocationListener;)V",
+                &[JValueGen::Object(&self.callback)],
+            )
+            .unwrap();
+        });
     }
+}
+
+fn get_location_manager<'a>(env: &mut JNIEnv<'a>, context: &JObject<'_>) -> JObject<'a> {
+    let service_name = env.new_string("location").unwrap();
+
+    env.call_method(
+        context,
+        "getSystemService",
+        "(Ljava/lang/String;)Ljava/lang/Object;",
+        &[JValueGen::Object(&service_name)],
+    )
+    .unwrap()
+    .l()
+    .unwrap()
+}
+
+fn get_executor<'a>(env: &mut JNIEnv<'a>, context: &JObject<'_>) -> JObject<'a> {
+    env.call_method(
+        context,
+        "getMainExecutor",
+        "()Ljava/util/concurrent/Executor;",
+        &[],
+    )
+    .unwrap()
+    .l()
+    .unwrap()
+}
+
+fn construct_callback<'a>(env: &mut JNIEnv<'a>, handler: &Arc<InnerHandler>) -> JObject<'a> {
+    let callback_class = callback::get_callback_class(env).unwrap();
+
+    let weak_ptr: *const InnerHandler = Arc::downgrade(handler).into_raw();
+    // TODO: Is there a better way without the provenance API?
+    let transmuted: [i64; 2] = unsafe { std::mem::transmute(weak_ptr) };
+    env.new_object(
+        callback_class,
+        "(JJ)V",
+        &[
+            JValueGen::Long(transmuted[0]),
+            JValueGen::Long(transmuted[1]),
+        ],
+    )
+    .unwrap()
+}
+
+fn construct_location_request<'a>(env: &mut JNIEnv<'a>) -> JObject<'a> {
+    let builder = env
+        .new_object(
+            "android/location/LocationRequest$Builder",
+            "(J)V",
+            // TODO: Don't hardcode
+            &[JValueGen::Long(100)],
+        )
+        .unwrap();
+
+    env.call_method(
+        builder,
+        "build",
+        "()Landroid/location/LocationRequest;",
+        &[],
+    )
+    .unwrap()
+    .l()
+    .unwrap()
 }
 
 // TODO: Could inner be JObject<'a>?
