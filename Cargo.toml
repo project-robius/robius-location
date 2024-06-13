@@ -1,0 +1,33 @@
+[package]
+name = "robius-location"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+cfg-if = "1.0.0"
+log = "*"
+makepad-widgets = { git = "https://github.com/makepad/makepad", branch = "rik" }
+
+[target.'cfg(target_os = "android")'.dependencies.jni]
+version = "0.21.1"
+
+[target.'cfg(target_os = "android")'.dependencies.robius-android-env]
+version = "0.1.0"
+
+[target.'cfg(any(target_vendor = "apple", target_os = "android", target_os = "linux"))'.dependencies.tokio]
+version = "1.35.1"
+default-features = false
+features = ["sync"]
+
+[target.'cfg(target_vendor = "apple")'.dependencies.icrate]
+version = "0.1.0"
+features = [
+    "CoreLocation",
+    "CoreLocation_CLLocation",
+    "CoreLocation_CLLocationManager",
+    "Foundation_NSArray",
+]
+
+[target.'cfg(target_vendor = "apple")'.dependencies.objc2]
+version = "0.5.0"
+features = ["verify"]
