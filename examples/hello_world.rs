@@ -3,8 +3,8 @@ use robius_location::{Error, Location, Manager};
 struct Handler;
 
 impl robius_location::Handler for Handler {
-    fn handle(&self, _: Location<'_>) {
-        println!("received location");
+    fn handle(&self, location: Location<'_>) {
+        println!("received location: {:?}", location.coordinates());
     }
 
     fn error(&self, _: Error) {
@@ -19,4 +19,6 @@ fn main() {
     manager.request_authorization();
     println!("c");
     manager.update_once();
+
+    loop {}
 }

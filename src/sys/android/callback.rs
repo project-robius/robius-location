@@ -11,8 +11,7 @@ use jni::{
 
 use crate::Result;
 
-const AUTHENTICATION_CALLBACK_BYTECODE: &[u8] =
-    include_bytes!(concat!(env!("OUT_DIR"), "/classes.dex"));
+const CALLBACK_BYTECODE: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/classes.dex"));
 
 // NOTE: This must be kept in sync with the signature of `rust_callback`.
 const RUST_CALLBACK_SIGNATURE: &str = "(JJLandroid/location/Location;)V";
@@ -77,8 +76,8 @@ fn load_callback_class<'a>(env: &mut JNIEnv<'a>) -> Result<JClass<'a>> {
 
     let byte_buffer = unsafe {
         env.new_direct_byte_buffer(
-            AUTHENTICATION_CALLBACK_BYTECODE.as_ptr() as *mut u8,
-            AUTHENTICATION_CALLBACK_BYTECODE.len(),
+            CALLBACK_BYTECODE.as_ptr() as *mut u8,
+            CALLBACK_BYTECODE.len(),
         )
     }?;
 

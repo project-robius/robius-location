@@ -6,8 +6,8 @@ import android.location.Location;
 import android.location.LocationListener;
 import java.util.function.Consumer;
 
-// Consumer<Location> is implemented for getCurrentLocation
-// LocationListener is implemented for requestLocationUpdates
+// `Consumer<Location>` is implemented for `getCurrentLocation`
+// `LocationListener` is implemented for `requestLocationUpdates`
 
 public class LocationCallback implements Consumer<Location>, LocationListener {
   private long weakPtrHigh;

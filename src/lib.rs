@@ -41,7 +41,8 @@ impl Manager {
     }
 }
 
-pub trait Handler: 'static {
+// TODO: Is Send necessary?
+pub trait Handler: 'static + Send + Sync {
     fn handle(&self, location: Location<'_>);
     fn error(&self, error: Error);
 }

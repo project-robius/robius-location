@@ -84,7 +84,7 @@ impl Manager {
     pub fn start_updates(&self) {
         // TODO: What happens if user calls start_updates multiple times?
 
-        // TODO: NoClassDefFoundError for android/lcoation/LocationListener-$CC
+        // TODO: NoClassDefFoundError for android/lcoation/LocationListener$-CC
 
         robius_android_env::with_activity(|env, context| {
             let manager = get_location_manager(env, context);
