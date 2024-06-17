@@ -24,19 +24,19 @@ impl Manager {
         }
     }
 
-    pub fn request_authorization(&self) {
-        self.inner.request_authorization();
+    pub fn request_authorization(&self) -> Result<()> {
+        self.inner.request_authorization()
     }
 
     pub fn update_once(&self) {
         self.inner.update_once()
     }
 
-    pub fn start_updates(&self) {
+    pub fn start_updates(&mut self) {
         self.inner.start_updates()
     }
 
-    pub fn stop_updates(&self) {
+    pub fn stop_updates(&mut self) {
         self.inner.stop_updates()
     }
 }
