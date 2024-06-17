@@ -9,7 +9,7 @@ use jni::{
     JNIEnv,
 };
 
-use crate::{Coordinates, Error, Handler};
+use crate::{Coordinates, Error, Handler, Result};
 
 type InnerHandler = Mutex<dyn Handler>;
 
@@ -38,7 +38,7 @@ impl Manager {
         }
     }
 
-    pub fn request_authorization(&self) {
+    pub fn request_authorization(&self) -> Result<()> {
         robius_android_env::with_activity(|env, current_activity| {
             // const COARSE_PERMISSION: &str = "android.permission.ACCESS_COARSE_LOCATION";
             const FINE_PERMISSION: &str = "android.permission.ACCESS_FINE_LOCATION";
@@ -57,6 +57,9 @@ impl Manager {
             )
             .unwrap();
         });
+
+        // TODO
+        Ok(())
     }
 
     pub fn update_once(&self) {

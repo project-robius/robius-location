@@ -8,7 +8,7 @@ use icrate::{
     },
 };
 
-use crate::{Coordinates, Handler};
+use crate::{Coordinates, Handler, Result};
 
 pub(crate) struct Manager {
     inner: Id<CLLocationManager>,
@@ -30,8 +30,10 @@ impl Manager {
         }
     }
 
-    pub(crate) fn request_authorization(&self) {
+    pub(crate) fn request_authorization(&self) -> Result<()> {
         unsafe { self.inner.requestAlwaysAuthorization() };
+        // TODO
+        Ok(())
     }
 
     pub(crate) fn update_once(&self) {

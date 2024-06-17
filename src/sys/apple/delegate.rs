@@ -13,7 +13,7 @@ use crate::Handler;
 
 type InnerHandler = dyn Handler;
 
-struct Ivars {
+pub(super) struct Ivars {
     handler: Box<InnerHandler>,
 }
 
