@@ -221,15 +221,34 @@ impl Location<'_> {
     }
 
     pub fn altitude(&self) -> f64 {
-        todo!();
+        robius_android_env::with_activity(|env, _| {
+            env.call_method(&self.inner, "getAltitude", "()D", &[])
+                .unwrap()
+                .d()
+                .unwrap()
+        })
+        .unwrap()
     }
 
+    // TODO: Downgrade external API to f32? Need to look at other platforms
     pub fn bearing(&self) -> f64 {
-        todo!();
+        robius_android_env::with_activity(|env, _| {
+            env.call_method(&self.inner, "getBearing", "()F", &[])
+                .unwrap()
+                .f()
+                .unwrap() as f64
+        })
+        .unwrap()
     }
 
     pub fn speed(&self) -> f64 {
-        todo!();
+        robius_android_env::with_activity(|env, _| {
+            env.call_method(&self.inner, "getSpeed", "()F", &[])
+                .unwrap()
+                .f()
+                .unwrap() as f64
+        })
+        .unwrap()
     }
 
     pub fn time(&self) {

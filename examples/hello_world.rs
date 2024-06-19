@@ -7,17 +7,14 @@ impl robius_location::Handler for Handler {
         println!("received location: {:?}", location.coordinates());
     }
 
-    fn error(&self, _: Error) {
-        println!("received error");
+    fn error(&self, e: Error) {
+        println!("received error: {e:?}");
     }
 }
 
 fn main() {
-    println!("a");
     let manager = Manager::new(Handler);
-    println!("b");
-    manager.request_authorization();
-    println!("c");
+    manager.request_authorization().unwrap();
     manager.update_once();
 
     loop {}

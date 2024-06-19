@@ -52,13 +52,14 @@ declare_class!(
             _: &CLLocationManager,
             locations: &NSArray<CLLocation>,
         ) {
-            let most_recent = locations.last();
-            self.ivars().handler.handle(crate::Location {
-                inner: Location {
-                    // TODO: Is there guaranteed to be at least one location?
-                    inner: most_recent.unwrap(),
-                },
-            });
+            for location in locations {
+                self.ivars().handler.handle(crate::Location {
+                    inner: Location {
+                        // TODO: Is there guaranteed to be at least one location?
+                        inner: location,
+                    },
+                });
+            }
         }
 
         #[method(locationManager:didFailWithError:)]

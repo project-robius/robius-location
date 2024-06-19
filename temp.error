@@ -1,0 +1,74 @@
+   Compiling robius-location v0.1.0 (/Users/klim/Projects/robius/shared-directory-utm/robius-location)
+error: failed to run custom build command for `robius-location v0.1.0 (/Users/klim/Projects/robius/shared-directory-utm/robius-location)`
+
+Caused by:
+  process didn't exit successfully: `/Users/klim/Projects/robius/shared-directory-utm/robius-location/target/debug/build/robius-location-22b48cd4b248d033/build-script-build` (exit status: 101)
+  --- stdout
+  cargo:rerun-if-changed=src/sys/android/LocationCallback.java
+
+  --- stderr
+  Error in /Users/klim/Projects/robius/shared-directory-utm/robius-location/target/aarch64-linux-android/debug/build/robius-location-2bec572ee7be7f29/out/robius/location/LocationCallback.class:
+  java.lang.IllegalArgumentException: Unsupported class file major version 64
+  Compilation failed with an internal error.
+  Exception in thread "main" java.lang.RuntimeException: com.android.tools.r8.CompilationFailedException: Compilation failed to complete, origin: /Users/klim/Projects/robius/shared-directory-utm/robius-location/target/aarch64-linux-android/debug/build/robius-location-2bec572ee7be7f29/out/robius/location/LocationCallback.class
+  	at com.android.tools.r8.internal.vj.a(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:98)
+  	at com.android.tools.r8.D8.main(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:4)
+  Caused by: com.android.tools.r8.CompilationFailedException: Compilation failed to complete, origin: /Users/klim/Projects/robius/shared-directory-utm/robius-location/target/aarch64-linux-android/debug/build/robius-location-2bec572ee7be7f29/out/robius/location/LocationCallback.class
+  	at Version.fakeStackEntry(Version_3.3.20-dev+aosp1.java:0)
+  	at com.android.tools.r8.internal.vj.a(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:75)
+  	at com.android.tools.r8.internal.vj.a(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:28)
+  	at com.android.tools.r8.internal.vj.a(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:27)
+  	at com.android.tools.r8.internal.vj.b(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:2)
+  	at com.android.tools.r8.D8.a(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:22)
+  	at com.android.tools.r8.D8.a(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:17)
+  	at com.android.tools.r8.internal.vj.a(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:85)
+  	... 1 more
+  Caused by: java.lang.IllegalArgumentException: Unsupported class file major version 64
+  	at com.android.tools.r8.internal.La.<init>(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:209)
+  	at com.android.tools.r8.internal.La.<init>(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:2)
+  	at com.android.tools.r8.graph.x2.a(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:16)
+  	at com.android.tools.r8.internal.vj.a(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:101)
+  	at com.android.tools.r8.internal.vj.a(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:102)
+  	at com.android.tools.r8.internal.vj.a(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:100)
+  	at com.android.tools.r8.graph.x2.b(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:2)
+  	at com.android.tools.r8.dex.a.a(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:26)
+  	at java.base/java.util.concurrent.ForkJoinTask$AdaptedCallable.exec(ForkJoinTask.java:1456)
+  	at java.base/java.util.concurrent.ForkJoinTask.doExec(ForkJoinTask.java:387)
+  	at java.base/java.util.concurrent.ForkJoinPool$WorkQueue.topLevelExec(ForkJoinPool.java:1312)
+  	at java.base/java.util.concurrent.ForkJoinPool.scan(ForkJoinPool.java:1843)
+  	at java.base/java.util.concurrent.ForkJoinPool.runWorker(ForkJoinPool.java:1808)
+  	at java.base/java.util.concurrent.ForkJoinWorkerThread.run(ForkJoinWorkerThread.java:188)
+  	Suppressed: java.lang.RuntimeException: java.util.concurrent.ExecutionException: com.android.tools.r8.internal.xj: java.lang.IllegalArgumentException: Unsupported class file major version 64
+  		at com.android.tools.r8.dex.b.a(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:107)
+  		at com.android.tools.r8.dex.b.a(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:28)
+  		at com.android.tools.r8.D8.a(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:25)
+  		at com.android.tools.r8.D8.d(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:609)
+  		at com.android.tools.r8.D8.c(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:1)
+  		at com.android.tools.r8.internal.vj.a(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:24)
+  		at com.android.tools.r8.internal.vj.b(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:2)
+  		at com.android.tools.r8.D8.a(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:22)
+  		at com.android.tools.r8.D8.a(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:17)
+  		at com.android.tools.r8.internal.vj.a(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:85)
+  		at com.android.tools.r8.D8.main(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:4)
+  	Caused by: java.util.concurrent.ExecutionException: com.android.tools.r8.internal.xj: java.lang.IllegalArgumentException: Unsupported class file major version 64
+  		at java.base/java.util.concurrent.ForkJoinTask.reportExecutionException(ForkJoinTask.java:581)
+  		at java.base/java.util.concurrent.ForkJoinTask.get(ForkJoinTask.java:993)
+  		at com.android.tools.r8.utils.C.a(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:56)
+  		at com.android.tools.r8.dex.b.a(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:88)
+  		... 10 more
+  	Caused by: com.android.tools.r8.internal.xj: java.lang.IllegalArgumentException: Unsupported class file major version 64
+  		at com.android.tools.r8.internal.xj.a(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:6)
+  		at com.android.tools.r8.internal.vj.a(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:104)
+  		at com.android.tools.r8.internal.vj.a(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:100)
+  		at com.android.tools.r8.graph.x2.b(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:2)
+  		at com.android.tools.r8.dex.a.a(R8_3.3.20-dev+aosp1_dd4c01853fd917497aef2d09abff533f0d25b062517ea74449d40e1778a34753:26)
+  		at java.base/java.util.concurrent.ForkJoinTask$AdaptedCallable.exec(ForkJoinTask.java:1456)
+  		at java.base/java.util.concurrent.ForkJoinTask.doExec(ForkJoinTask.java:387)
+  		at java.base/java.util.concurrent.ForkJoinPool$WorkQueue.topLevelExec(ForkJoinPool.java:1312)
+  		at java.base/java.util.concurrent.ForkJoinPool.scan(ForkJoinPool.java:1843)
+  		at java.base/java.util.concurrent.ForkJoinPool.runWorker(ForkJoinPool.java:1808)
+  		at java.base/java.util.concurrent.ForkJoinWorkerThread.run(ForkJoinWorkerThread.java:188)
+  	Caused by: [CIRCULAR REFERENCE: java.lang.IllegalArgumentException: Unsupported class file major version 64]
+  thread 'main' panicked at build.rs:37:9:
+  java d8.jar invocation failed
+  note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

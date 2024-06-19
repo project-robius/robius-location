@@ -24,6 +24,7 @@ public class LocationCallback implements Consumer<Location>, LocationListener {
     rustCallback(this.weakPtrHigh, this.weakPtrLow, location);
   }
 
+  @Override
   public void onLocationChanged(Location location) {
     rustCallback(this.weakPtrHigh, this.weakPtrLow, location);
   }

@@ -3,6 +3,9 @@ name = "robius-location"
 version = "0.1.0"
 edition = "2021"
 
+[build-dependencies]
+android-build = "0.1.0"
+
 [dependencies]
 cfg-if = "1.0.0"
 log = "*"
