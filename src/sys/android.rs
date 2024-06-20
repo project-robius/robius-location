@@ -87,15 +87,17 @@ impl Manager {
     pub fn start_updates(&self) {
         // TODO: What happens if user calls start_updates multiple times?
 
-        // TODO: NoClassDefFoundError for android/lcoation/LocationListener$-CC
+        // TODO: NoClassDefFoundError for android/location/LocationListener$-CC
 
         robius_android_env::with_activity(|env, context| {
+            let result = env.find_class("android/location/LocationListener");
+            makepad_widgets::log!("1: {result:?}");
             let manager = get_location_manager(env, context);
             let provider = env.new_string("fused").unwrap();
             let request = construct_location_request(env);
             let executor = get_executor(env, context);
 
-            env.call_method(
+            let result = env.call_method(
                 manager,
                 "requestLocationUpdates",
                 "(Ljava/lang/String;Landroid/location/LocationRequest;Ljava/util/concurrent/\
@@ -106,8 +108,8 @@ impl Manager {
                     JValueGen::Object(&executor),
                     JValueGen::Object(&self.callback),
                 ],
-            )
-            .unwrap();
+            );
+            makepad_widgets::log!("2: {result:?}");
         });
     }
 

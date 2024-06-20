@@ -72,7 +72,8 @@ fn register_rust_callback<'a>(env: &mut JNIEnv<'a>, callback_class: &JClass<'a>)
 }
 
 fn load_callback_class<'a>(env: &mut JNIEnv<'a>) -> Result<JClass<'a>> {
-    const LOADER_CLASS: &str = "dalvik/system/InMemoryDexClassLoader";
+    const PATH_CLASS_LOADER: &str = "dalvik/system/PathClassLoader";
+    const IN_MEMORY_LOADER: &str = "dalvik/system/InMemoryDexClassLoader";
 
     let byte_buffer = unsafe {
         env.new_direct_byte_buffer(
@@ -81,24 +82,59 @@ fn load_callback_class<'a>(env: &mut JNIEnv<'a>) -> Result<JClass<'a>> {
         )
     }?;
 
-    let dex_class_loader = env.new_object(
-        LOADER_CLASS,
-        "(Ljava/nio/ByteBuffer;Ljava/lang/ClassLoader;)V",
+    let current_dir_string = env.new_string(".")?;
+    let path_class_loader = env.new_object(
+        PATH_CLASS_LOADER,
+        "(Ljava/lang/String;Ljava/lang/ClassLoader;)V",
         &[
-            JValueGen::Object(&JObject::from(byte_buffer)),
+            JValueGen::Object(&current_dir_string),
             JValueGen::Object(&JObject::null()),
         ],
     )?;
 
-    Ok(env
+    let dex_class_loader = env.new_object(
+        IN_MEMORY_LOADER,
+        "(Ljava/nio/ByteBuffer;Ljava/lang/ClassLoader;)V",
+        &[
+            JValueGen::Object(&JObject::from(byte_buffer)),
+            // JValueGen::Object(&path_class_loader),
+            JValueGen::Object(&JObject::null()),
+        ],
+    )?;
+
+    // let system_loader = env
+    //     .call_static_method(
+    //         "java/lang/ClassLoader",
+    //         "getSystemClassloader",
+    //         "()Ljava/lang/ClassLoader;",
+    //         &[],
+    //     )
+    //     .unwrap()
+    //     .l()
+    //     .unwrap();
+
+    let s = env.new_string("android.location.LocationListener").unwrap();
+    let temp = env.call_method(
+        &dex_class_loader,
+        "loadClass",
+        "(Ljava/lang/String;)Ljava/lang/Class;",
+        &[JValueGen::Object(&s)],
+    );
+    makepad_widgets::log!("inner: {temp:#?}");
+
+    // loop {}
+
+    let temp = env
         .call_method(
             &dex_class_loader,
             "loadClass",
             "(Ljava/lang/String;)Ljava/lang/Class;",
             &[JValueGen::Object(&JObject::from(
-                env.new_string("robius/location/LocationCallback").unwrap(),
+                env.new_string("robius.location.LocationCallback").unwrap(),
             ))],
         )?
         .l()?
-        .into())
+        .into();
+    Box::leak(Box::new(env.new_global_ref(dex_class_loader)));
+    Ok(temp)
 }

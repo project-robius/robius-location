@@ -22,7 +22,7 @@ fn main() {
                 .classes_out_dir(out_dir.clone())
                 .file(java_file)
                 .compile()
-                .unwrap()
+                .expect("failed to acquire exit status for javac invocation")
                 .success(),
             "javac invocation failed"
         );
@@ -44,7 +44,7 @@ fn main() {
                 .arg(&out_dir)
                 .arg(&class_file)
                 .run()
-                .unwrap()
+                .expect("failed to acquire exit status for java d8.jar invocation")
                 .success(),
             "java d8.jar invocation failed"
         );
