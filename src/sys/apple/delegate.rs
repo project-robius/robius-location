@@ -55,7 +55,6 @@ declare_class!(
             for location in locations {
                 self.ivars().handler.handle(crate::Location {
                     inner: Location {
-                        // TODO: Is there guaranteed to be at least one location?
                         inner: location,
                     },
                 });
