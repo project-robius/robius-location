@@ -1,4 +1,5 @@
 mod callback;
+
 use std::{
     marker::PhantomData,
     sync::{Arc, Mutex},
@@ -202,55 +203,54 @@ pub struct Location<'a> {
 }
 
 impl Location<'_> {
-    pub fn coordinates(&self) -> Coordinates {
+    pub fn coordinates(&self) -> Result<Coordinates> {
         robius_android_env::with_activity(|env, _| {
             let latitude = env
-                .call_method(&self.inner, "getLatitude", "()D", &[])
-                .unwrap()
-                .d()
-                .unwrap();
+                .call_method(&self.inner, "getLatitude", "()D", &[])?
+                .d()?;
             let longitude = env
-                .call_method(&self.inner, "getLongitude", "()D", &[])
-                .unwrap()
-                .d()
-                .unwrap();
-            Coordinates {
+                .call_method(&self.inner, "getLongitude", "()D", &[])?
+                .d()?;
+            Ok(Coordinates {
                 latitude,
                 longitude,
+            })
+        })
+        .ok_or(Error::AndroidEnvironment)
+        // Poor man's `flatten`
+        .and_then(|x| x)
+    }
+
+    pub fn altitude(&self) -> Result<f64> {
+        robius_android_env::with_activity(|env, _| {
+            env.call_method(&self.inner, "getAltitude", "()D", &[])?
+                .d()
+                .map_err(|e| e.into())
+        })
+        .ok_or(Error::AndroidEnvironment)
+        .and_then(|x| x)
+    }
+
+    pub fn bearing(&self) -> Result<f64> {
+        robius_android_env::with_activity(|env, _| {
+            match env.call_method(&self.inner, "getBearing", "()F", &[])?.f() {
+                Ok(bearing) => Ok(bearing as f64),
+                Err(e) => Err(e.into()),
             }
         })
-        .unwrap()
+        .ok_or(Error::AndroidEnvironment)
+        .and_then(|x| x)
     }
 
-    pub fn altitude(&self) -> f64 {
+    pub fn speed(&self) -> Result<f64> {
         robius_android_env::with_activity(|env, _| {
-            env.call_method(&self.inner, "getAltitude", "()D", &[])
-                .unwrap()
-                .d()
-                .unwrap()
+            match env.call_method(&self.inner, "getSpeed", "()F", &[])?.f() {
+                Ok(speed) => Ok(speed as f64),
+                Err(e) => Err(e.into()),
+            }
         })
-        .unwrap()
-    }
-
-    // TODO: Downgrade external API to f32? Need to look at other platforms
-    pub fn bearing(&self) -> f64 {
-        robius_android_env::with_activity(|env, _| {
-            env.call_method(&self.inner, "getBearing", "()F", &[])
-                .unwrap()
-                .f()
-                .unwrap() as f64
-        })
-        .unwrap()
-    }
-
-    pub fn speed(&self) -> f64 {
-        robius_android_env::with_activity(|env, _| {
-            env.call_method(&self.inner, "getSpeed", "()F", &[])
-                .unwrap()
-                .f()
-                .unwrap() as f64
-        })
-        .unwrap()
+        .ok_or(Error::AndroidEnvironment)
+        .and_then(|x| x)
     }
 
     pub fn time(&self) {

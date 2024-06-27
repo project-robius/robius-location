@@ -52,22 +52,22 @@ pub struct Location<'a> {
 }
 
 impl Location<'_> {
-    pub fn coordinates(&self) -> Coordinates {
+    pub fn coordinates(&self) -> Result<Coordinates> {
         self.inner.coordinates()
     }
 
-    pub fn altitude(&self) -> f64 {
+    pub fn altitude(&self) -> Result<f64> {
         self.inner.altitude()
     }
 
     /// The direction in which the device is travelling, measured in degrees and
     /// relative to due north.
-    pub fn bearing(&self) -> f64 {
+    pub fn bearing(&self) -> Result<f64> {
         self.inner.bearing()
     }
 
     /// The instantaneous speed of the device measured in meters per second.
-    pub fn speed(&self) -> f64 {
+    pub fn speed(&self) -> Result<f64> {
         self.inner.speed()
     }
 

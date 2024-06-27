@@ -28,19 +28,19 @@ pub struct Location<'a> {
 }
 
 impl Location<'_> {
-    pub fn coordinates(&self) -> Coordinates {
+    pub fn coordinates(&self) -> Result<Coordinates> {
         unimplemented!();
     }
 
-    pub fn altitude(&self) -> f64 {
+    pub fn altitude(&self) -> Result<f64> {
         unimplemented!();
     }
 
-    pub fn bearing(&self) -> f64 {
+    pub fn bearing(&self) -> Result<f64> {
         unimplemented!();
     }
 
-    pub fn speed(&self) -> f64 {
+    pub fn speed(&self) -> Result<f64> {
         unimplemented!();
     }
 

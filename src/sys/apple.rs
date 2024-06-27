@@ -54,28 +54,28 @@ pub(crate) struct Location<'a> {
 }
 
 impl Location<'_> {
-    pub(crate) fn coordinates(&self) -> Coordinates {
+    pub(crate) fn coordinates(&self) -> Result<Coordinates> {
         let CLLocationCoordinate2D {
             latitude,
             longitude,
         } = unsafe { self.inner.coordinate() };
 
-        Coordinates {
+        Ok(Coordinates {
             latitude,
             longitude,
-        }
+        })
     }
 
-    pub(crate) fn altitude(&self) -> f64 {
-        unsafe { self.inner.altitude() }
+    pub(crate) fn altitude(&self) -> Result<f64> {
+        Ok(unsafe { self.inner.altitude() })
     }
 
-    pub(crate) fn bearing(&self) -> f64 {
-        unsafe { self.inner.course() }
+    pub(crate) fn bearing(&self) -> Result<f64> {
+        Ok(unsafe { self.inner.course() })
     }
 
-    pub(crate) fn speed(&self) -> f64 {
-        unsafe { self.inner.speed() }
+    pub(crate) fn speed(&self) -> Result<f64> {
+        Ok(unsafe { self.inner.speed() })
     }
 
     pub(crate) fn time(&self) {

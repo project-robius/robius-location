@@ -40,10 +40,11 @@ impl Manager {
                                 PositionStatus::Ready => {
                                     // TODO: unwrap?
                                     let geolocator = geolocator.as_ref().unwrap();
-                                    rust_handler_cloned
-                                        .lock()
-                                        .unwrap()
-                                        .handle(get_location(geolocator));
+                                    if let Ok(handler) = rust_handler_cloned.lock() {
+                                        if let Ok(location) = get_location(geolocator) {
+                                            handler.handle(location)
+                                        }
+                                    }
                                 }
                                 PositionStatus::Initializing => {}
                                 PositionStatus::NoData => {}
@@ -75,7 +76,7 @@ impl Manager {
     pub fn request_authorization(&self) -> Result<()> {
         // TODO: Could do an async API, but like :shrug:. No other platform has async
         // and this should only be run once per program.
-        match Geolocator::RequestAccessAsync().unwrap().get().unwrap() {
+        match Geolocator::RequestAccessAsync()?.get()? {
             GeolocationAccessStatus::Allowed => Ok(()),
             GeolocationAccessStatus::Denied => Err(Error::AuthorizationDenied),
             _ => Err(Error::Unknown),
@@ -92,13 +93,12 @@ impl Manager {
         let handler = self.rust_handler.clone();
         let inner = SyncGeolocator(self.inner.clone());
 
-        // TODO: This is a roundabout way to do this
-
         spawn(move || {
-            handler
-                .lock()
-                .unwrap()
-                .handle(get_location(inner.0.as_ref()))
+            if let Ok(handler) = handler.lock() {
+                if let Ok(location) = get_location(inner.0.as_ref()) {
+                    handler.handle(location)
+                }
+            }
         });
     }
 
@@ -119,26 +119,24 @@ pub struct Location<'a> {
     _phantom_data: PhantomData<&'a ()>,
 }
 
-// TODO: Civic and venue data?
-
 impl Location<'_> {
-    pub fn coordinates(&self) -> Coordinates {
-        Coordinates {
-            latitude: self.inner.Latitude().unwrap(),
-            longitude: self.inner.Longitude().unwrap(),
-        }
+    pub fn coordinates(&self) -> Result<Coordinates> {
+        Ok(Coordinates {
+            latitude: self.inner.Latitude()?,
+            longitude: self.inner.Longitude()?,
+        })
     }
 
-    pub fn altitude(&self) -> f64 {
-        self.inner.Altitude().unwrap().Value().unwrap()
+    pub fn altitude(&self) -> Result<f64> {
+        self.inner.Altitude()?.Value().map_err(|e| e.into())
     }
 
-    pub fn bearing(&self) -> f64 {
-        self.inner.Heading().unwrap().Value().unwrap()
+    pub fn bearing(&self) -> Result<f64> {
+        self.inner.Heading()?.Value().map_err(|e| e.into())
     }
 
-    pub fn speed(&self) -> f64 {
-        self.inner.Speed().unwrap().Value().unwrap()
+    pub fn speed(&self) -> Result<f64> {
+        self.inner.Speed()?.Value().map_err(|e| e.into())
     }
 
     pub fn time(&self) {
@@ -146,19 +144,13 @@ impl Location<'_> {
     }
 }
 
-fn get_location(geolocator: &Geolocator) -> crate::Location {
-    crate::Location {
+fn get_location(geolocator: &Geolocator) -> Result<crate::Location> {
+    Ok(crate::Location {
         inner: Location {
-            inner: geolocator
-                .GetGeopositionAsync()
-                .unwrap()
-                .get()
-                .unwrap()
-                .Coordinate()
-                .unwrap(),
+            inner: geolocator.GetGeopositionAsync()?.get()?.Coordinate()?,
             _phantom_data: PhantomData,
         },
-    }
+    })
 }
 
 struct SyncGeolocator(Arc<Geolocator>);
@@ -167,3 +159,9 @@ struct SyncGeolocator(Arc<Geolocator>);
 // TODO: Safety
 unsafe impl Send for SyncGeolocator {}
 unsafe impl Sync for SyncGeolocator {}
+
+impl From<windows::core::Error> for Error {
+    fn from(_: windows::core::Error) -> Self {
+        Error::Unknown
+    }
+}
