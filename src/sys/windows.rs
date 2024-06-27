@@ -5,7 +5,7 @@ use std::{
 
 use windows::{
     Devices::Geolocation::{
-        GeolocationAccessStatus, Geolocator, Geoposition, PositionStatus, StatusChangedEventArgs,
+        Geocoordinate, GeolocationAccessStatus, Geolocator, PositionStatus, StatusChangedEventArgs,
     },
     Foundation::{EventRegistrationToken, TypedEventHandler},
 };
@@ -115,7 +115,7 @@ impl Manager {
 }
 
 pub struct Location<'a> {
-    inner: Geoposition,
+    inner: Geocoordinate,
     _phantom_data: PhantomData<&'a ()>,
 }
 
@@ -123,23 +123,22 @@ pub struct Location<'a> {
 
 impl Location<'_> {
     pub fn coordinates(&self) -> Coordinates {
-        let coordinates = self.inner.Coordinate().unwrap();
         Coordinates {
-            latitude: coordinates.Latitude().unwrap(),
-            longitude: coordinates.Longitude().unwrap(),
+            latitude: self.inner.Latitude().unwrap(),
+            longitude: self.inner.Longitude().unwrap(),
         }
     }
 
     pub fn altitude(&self) -> f64 {
-        unimplemented!();
+        self.inner.Altitude().unwrap().Value().unwrap()
     }
 
     pub fn bearing(&self) -> f64 {
-        unimplemented!();
+        self.inner.Heading().unwrap().Value().unwrap()
     }
 
     pub fn speed(&self) -> f64 {
-        unimplemented!();
+        self.inner.Speed().unwrap().Value().unwrap()
     }
 
     pub fn time(&self) {
@@ -150,7 +149,13 @@ impl Location<'_> {
 fn get_location(geolocator: &Geolocator) -> crate::Location {
     crate::Location {
         inner: Location {
-            inner: geolocator.GetGeopositionAsync().unwrap().get().unwrap(),
+            inner: geolocator
+                .GetGeopositionAsync()
+                .unwrap()
+                .get()
+                .unwrap()
+                .Coordinate()
+                .unwrap(),
             _phantom_data: PhantomData,
         },
     }
