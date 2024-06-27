@@ -23,11 +23,11 @@ pub(crate) struct Manager {
 }
 
 impl Manager {
-    pub fn new<T>(handler: T) -> Self
+    pub fn new<T>(handler: T) -> Result<Self>
     where
         T: Handler,
     {
-        let geolocator = Arc::new(Geolocator::new().unwrap());
+        let geolocator = Arc::new(Geolocator::new()?);
         let rust_handler = Arc::new(Mutex::new(handler));
         let rust_handler_cloned = rust_handler.clone();
 
@@ -65,12 +65,12 @@ impl Manager {
                 },
             );
 
-        Self {
+        Ok(Self {
             inner: geolocator,
             handler: event_handler,
             rust_handler,
             token: None,
-        }
+        })
     }
 
     pub fn request_authorization(&self) -> Result<()> {
@@ -83,7 +83,7 @@ impl Manager {
         }
     }
 
-    pub fn update_once(&self) {
+    pub fn update_once(&self) -> Result<()> {
         #[cfg(not(feature = "async"))]
         use std::thread::spawn;
 
@@ -100,17 +100,21 @@ impl Manager {
                 }
             }
         });
+
+        Ok(())
     }
 
-    pub fn start_updates(&mut self) {
-        let token = self.inner.StatusChanged(&self.handler).unwrap();
+    pub fn start_updates(&mut self) -> Result<()> {
+        let token = self.inner.StatusChanged(&self.handler)?;
         self.token = Some(token);
+        Ok(())
     }
 
-    pub fn stop_updates(&mut self) {
+    pub fn stop_updates(&mut self) -> Result<()> {
         if let Some(token) = self.token.take() {
-            self.inner.RemoveStatusChanged(token).unwrap();
+            self.inner.RemoveStatusChanged(token)?;
         }
+        Ok(())
     }
 }
 

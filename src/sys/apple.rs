@@ -17,17 +17,17 @@ pub(crate) struct Manager {
 }
 
 impl Manager {
-    pub(crate) fn new<T>(handler: T) -> Self
+    pub(crate) fn new<T>(handler: T) -> Result<Self>
     where
         T: Handler,
     {
         let inner = unsafe { CLLocationManager::new() };
         let delegate = ProtocolObject::from_id(Delegate::new(handler));
         unsafe { inner.setDelegate(Some(&delegate)) };
-        Self {
+        Ok(Self {
             inner,
             _delegate: delegate,
-        }
+        })
     }
 
     pub(crate) fn request_authorization(&self) -> Result<()> {
@@ -36,16 +36,19 @@ impl Manager {
         Ok(())
     }
 
-    pub(crate) fn update_once(&self) {
+    pub(crate) fn update_once(&self) -> Result<()> {
         unsafe { self.inner.requestLocation() };
+        Ok(())
     }
 
-    pub(crate) fn start_updates(&self) {
+    pub(crate) fn start_updates(&self) -> Result<()> {
         unsafe { self.inner.startUpdatingLocation() }
+        Ok(())
     }
 
-    pub(crate) fn stop_updates(&self) {
+    pub(crate) fn stop_updates(&self) -> Result<()> {
         unsafe { self.inner.stopUpdatingLocation() }
+        Ok(())
     }
 }
 

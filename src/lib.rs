@@ -15,28 +15,28 @@ pub struct Manager {
 }
 
 impl Manager {
-    pub fn new<T>(handler: T) -> Self
+    pub fn new<T>(handler: T) -> Result<Self>
     where
         T: Handler,
     {
-        Manager {
-            inner: sys::Manager::new(handler),
-        }
+        Ok(Manager {
+            inner: sys::Manager::new(handler)?,
+        })
     }
 
     pub fn request_authorization(&self) -> Result<()> {
         self.inner.request_authorization()
     }
 
-    pub fn update_once(&self) {
+    pub fn update_once(&self) -> Result<()> {
         self.inner.update_once()
     }
 
-    pub fn start_updates(&mut self) {
+    pub fn start_updates(&mut self) -> Result<()> {
         self.inner.start_updates()
     }
 
-    pub fn stop_updates(&mut self) {
+    pub fn stop_updates(&mut self) -> Result<()> {
         self.inner.stop_updates()
     }
 }

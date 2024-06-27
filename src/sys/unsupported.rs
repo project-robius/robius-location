@@ -5,22 +5,28 @@ use crate::{Coordinates, Handler, Result};
 pub(crate) struct Manager;
 
 impl Manager {
-    pub fn new<T>(_handler: T) -> Self
+    pub fn new<T>(_handler: T) -> Result<Self>
     where
         T: Handler,
     {
-        Self
+        Ok(Self)
     }
 
     pub fn request_authorization(&self) -> Result<()> {
         Ok(())
     }
 
-    pub fn update_once(&self) {}
+    pub fn update_once(&self) -> Result<()> {
+        Ok(())
+    }
 
-    pub fn start_updates(&self) {}
+    pub fn start_updates(&self) -> Result<()> {
+        Ok(())
+    }
 
-    pub fn stop_updates(&self) {}
+    pub fn stop_updates(&self) -> Result<()> {
+        Ok(())
+    }
 }
 
 pub struct Location<'a> {

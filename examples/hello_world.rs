@@ -13,9 +13,9 @@ impl robius_location::Handler for Handler {
 }
 
 fn main() {
-    let manager = Manager::new(Handler);
+    let manager = Manager::new(Handler).unwrap();
     manager.request_authorization().unwrap();
-    manager.update_once();
+    manager.update_once().unwrap();
 
     loop {}
 }

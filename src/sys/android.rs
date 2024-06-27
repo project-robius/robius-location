@@ -24,30 +24,30 @@ pub struct Manager {
 }
 
 impl Manager {
-    pub fn new<T>(handler: T) -> Self
+    pub fn new<T>(handler: T) -> Result<Self>
     where
         T: Handler,
     {
         let handler: Arc<InnerHandler> = Arc::new(Mutex::new(handler));
-        Manager {
+        Ok(Manager {
             callback: robius_android_env::with_activity(|env, _| {
-                let callback = construct_callback(env, &handler);
-                env.new_global_ref(callback).unwrap()
+                let callback = construct_callback(env, &handler)?;
+                env.new_global_ref(callback).map_err(|e| e.into())
             })
-            .unwrap(),
+            .ok_or(Error::AndroidEnvironment)
+            .and_then(|x| x)?,
             _handler: handler,
-        }
+        })
     }
 
     pub fn request_authorization(&self) -> Result<()> {
+        // TODO: Block till authorization received?
         robius_android_env::with_activity(|env, current_activity| {
             // const COARSE_PERMISSION: &str = "android.permission.ACCESS_COARSE_LOCATION";
             const FINE_PERMISSION: &str = "android.permission.ACCESS_FINE_LOCATION";
 
-            let permissions = env.new_string(FINE_PERMISSION).unwrap();
-            let array = env
-                .new_object_array(1, "java/lang/String", permissions)
-                .unwrap();
+            let permissions = env.new_string(FINE_PERMISSION)?;
+            let array = env.new_object_array(1, "java/lang/String", permissions)?;
             let request_code = 3;
 
             env.call_method(
@@ -55,19 +55,19 @@ impl Manager {
                 "requestPermissions",
                 "([Ljava/lang/String;I)V",
                 &[JValueGen::Object(&array), JValueGen::Int(request_code)],
-            )
-            .unwrap();
-        });
+            )?;
 
-        // TODO
-        Ok(())
+            Ok(())
+        })
+        .ok_or(Error::AndroidEnvironment)
+        .and_then(|x| x)
     }
 
-    pub fn update_once(&self) {
+    pub fn update_once(&self) -> Result<()> {
         robius_android_env::with_activity(|env, context| {
-            let manager = get_location_manager(env, context);
-            let provider = env.new_string("fused").unwrap();
-            let executor = get_executor(env, context);
+            let manager = get_location_manager(env, context)?;
+            let provider = env.new_string("fused")?;
+            let executor = get_executor(env, context)?;
 
             env.call_method(
                 manager,
@@ -80,25 +80,26 @@ impl Manager {
                     JValueGen::Object(&executor),
                     JValueGen::Object(&self.callback),
                 ],
-            )
-            .unwrap();
-        });
+            )?;
+
+            Ok(())
+        })
+        .ok_or(Error::AndroidEnvironment)
+        .and_then(|x| x)
     }
 
-    pub fn start_updates(&self) {
+    pub fn start_updates(&self) -> Result<()> {
         // TODO: What happens if user calls start_updates multiple times?
 
         // TODO: NoClassDefFoundError for android/location/LocationListener$-CC
 
         robius_android_env::with_activity(|env, context| {
-            let result = env.find_class("android/location/LocationListener");
-            makepad_widgets::log!("1: {result:?}");
-            let manager = get_location_manager(env, context);
-            let provider = env.new_string("fused").unwrap();
-            let request = construct_location_request(env);
-            let executor = get_executor(env, context);
+            let manager = get_location_manager(env, context)?;
+            let provider = env.new_string("fused")?;
+            let request = construct_location_request(env)?;
+            let executor = get_executor(env, context)?;
 
-            let result = env.call_method(
+            env.call_method(
                 manager,
                 "requestLocationUpdates",
                 "(Ljava/lang/String;Landroid/location/LocationRequest;Ljava/util/concurrent/\
@@ -109,57 +110,63 @@ impl Manager {
                     JValueGen::Object(&executor),
                     JValueGen::Object(&self.callback),
                 ],
-            );
-            makepad_widgets::log!("2: {result:?}");
-        });
+            )?;
+
+            Ok(())
+        })
+        .ok_or(Error::AndroidEnvironment)
+        .and_then(|x| x)
     }
 
-    pub fn stop_updates(&self) {
+    pub fn stop_updates(&self) -> Result<()> {
         // TODO: Request flush?
 
         // TODO: What happens if user calls stop_updates prior to calling start_updates
 
         robius_android_env::with_activity(|env, context| {
-            let manager = get_location_manager(env, context);
+            let manager = get_location_manager(env, context)?;
             env.call_method(
                 manager,
                 "removeUpdates",
                 "(Landroid/location/LocationListener;)V",
                 &[JValueGen::Object(&self.callback)],
-            )
-            .unwrap();
-        });
+            )?;
+            Ok(())
+        })
+        .ok_or(Error::AndroidEnvironment)
+        .and_then(|x| x)
     }
 }
 
-fn get_location_manager<'a>(env: &mut JNIEnv<'a>, context: &JObject<'_>) -> JObject<'a> {
-    let service_name = env.new_string("location").unwrap();
+fn get_location_manager<'a>(env: &mut JNIEnv<'a>, context: &JObject<'_>) -> Result<JObject<'a>> {
+    let service_name = env.new_string("location")?;
 
     env.call_method(
         context,
         "getSystemService",
         "(Ljava/lang/String;)Ljava/lang/Object;",
         &[JValueGen::Object(&service_name)],
-    )
-    .unwrap()
+    )?
     .l()
-    .unwrap()
+    .map_err(|e| e.into())
 }
 
-fn get_executor<'a>(env: &mut JNIEnv<'a>, context: &JObject<'_>) -> JObject<'a> {
+fn get_executor<'a>(env: &mut JNIEnv<'a>, context: &JObject<'_>) -> Result<JObject<'a>> {
     env.call_method(
         context,
         "getMainExecutor",
         "()Ljava/util/concurrent/Executor;",
         &[],
-    )
-    .unwrap()
+    )?
     .l()
-    .unwrap()
+    .map_err(|e| e.into())
 }
 
-fn construct_callback<'a>(env: &mut JNIEnv<'a>, handler: &Arc<InnerHandler>) -> JObject<'a> {
-    let callback_class = callback::get_callback_class(env).unwrap();
+fn construct_callback<'a>(
+    env: &mut JNIEnv<'a>,
+    handler: &Arc<InnerHandler>,
+) -> Result<JObject<'a>> {
+    let callback_class = callback::get_callback_class(env)?;
 
     let weak_ptr: *const InnerHandler = Arc::downgrade(handler).into_raw();
     // TODO: Is there a better way without the provenance API?
@@ -172,28 +179,25 @@ fn construct_callback<'a>(env: &mut JNIEnv<'a>, handler: &Arc<InnerHandler>) -> 
             JValueGen::Long(transmuted[1]),
         ],
     )
-    .unwrap()
+    .map_err(|e| e.into())
 }
 
-fn construct_location_request<'a>(env: &mut JNIEnv<'a>) -> JObject<'a> {
-    let builder = env
-        .new_object(
-            "android/location/LocationRequest$Builder",
-            "(J)V",
-            // TODO: Don't hardcode
-            &[JValueGen::Long(100)],
-        )
-        .unwrap();
+fn construct_location_request<'a>(env: &mut JNIEnv<'a>) -> Result<JObject<'a>> {
+    let builder = env.new_object(
+        "android/location/LocationRequest$Builder",
+        "(J)V",
+        // TODO: Don't hardcode
+        &[JValueGen::Long(100)],
+    )?;
 
     env.call_method(
         builder,
         "build",
         "()Landroid/location/LocationRequest;",
         &[],
-    )
-    .unwrap()
+    )?
     .l()
-    .unwrap()
+    .map_err(|e| e.into())
 }
 
 // TODO: Could inner be JObject<'a>?
