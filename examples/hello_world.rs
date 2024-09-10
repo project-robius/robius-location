@@ -1,10 +1,10 @@
-use robius_location::{Error, Location, Manager};
+use robius_location::{Access, Accuracy, Error, Location, Manager};
 
 struct Handler;
 
 impl robius_location::Handler for Handler {
     fn handle(&self, location: Location<'_>) {
-        println!("received location: {:?}", location.coordinates());
+        println!("received location: {:?}", location.time());
     }
 
     fn error(&self, e: Error) {
@@ -13,9 +13,12 @@ impl robius_location::Handler for Handler {
 }
 
 fn main() {
-    let manager = Manager::new(Handler).unwrap();
-    manager.request_authorization().unwrap();
-    manager.update_once().unwrap();
+    let mut manager = Manager::new(Handler).unwrap();
+
+    manager
+        .request_authorization(Access::Foreground, Accuracy::Precise)
+        .unwrap();
+    manager.start_updates().unwrap();
 
     loop {}
 }

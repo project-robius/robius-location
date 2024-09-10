@@ -2,14 +2,24 @@
 name = "robius-location"
 version = "0.1.0"
 edition = "2021"
+authors = [
+    "Klim Tsoutsman <klim@tsoutsman.com>",
+    "Kevin Boos <kevinaboos@gmail.com>",
+    "Project Robius Maintainers",
+]
+description = "Rust abstractions for multi-platform location data"
+homepage = "https://robius.rs/"
+keywords = ["robius", "location", "coordinate"]
+categories = ["os", "hardware-support", "api-bindings"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/project-robius/robius-location"
 
 [build-dependencies]
 android-build = "0.1.0"
 
 [dependencies]
 cfg-if = "1.0.0"
-log = "*"
-makepad-widgets = { git = "https://github.com/makepad/makepad", branch = "rik" }
 
 [target.'cfg(target_os = "android")'.dependencies.jni]
 version = "0.21.1"
@@ -17,18 +27,21 @@ version = "0.21.1"
 [target.'cfg(target_os = "android")'.dependencies.robius-android-env]
 version = "0.1.0"
 
-[target.'cfg(target_vendor = "apple")'.dependencies.icrate]
-version = "0.1.0"
-features = [
-    "CoreLocation",
-    "CoreLocation_CLLocation",
-    "CoreLocation_CLLocationManager",
-    "Foundation_NSArray",
-]
-
 [target.'cfg(target_vendor = "apple")'.dependencies.objc2]
 version = "0.5.0"
 features = ["verify"]
+
+[target.'cfg(target_vendor = "apple")'.dependencies.objc2-core-location]
+version = "0.2.2"
+features = [
+    "CLLocation",
+    "CLLocationManager",
+    "CLLocationManagerDelegate",
+]
+
+[target.'cfg(target_vendor = "apple")'.dependencies.objc2-foundation]
+version = "0.2.2"
+features = []
 
 [target.'cfg(target_os = "windows")'.dependencies.tokio]
 version = "1.38.0"

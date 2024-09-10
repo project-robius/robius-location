@@ -2,7 +2,8 @@ mod callback;
 
 use std::{
     marker::PhantomData,
-    sync::{Arc, Mutex},
+    sync::Mutex,
+    time::{Duration, SystemTime},
 };
 
 use jni::{
@@ -10,17 +11,16 @@ use jni::{
     JNIEnv,
 };
 
-use crate::{Coordinates, Error, Handler, Result};
+use crate::{Access, Accuracy, Coordinates, Error, Handler, Result};
 
 type InnerHandler = Mutex<dyn Handler>;
 
 pub struct Manager {
     callback: GlobalRef,
-    // It's fine to use an `std` Mutex in an asynchronous context here, because we can only
-    // encounter contention when dropping, and the guard isn't held across await points.
-    //
-    // We store this so that it is not dropped, and the callback can call the handler.
-    _handler: Arc<InnerHandler>,
+    // We "leak" the handler so that `rust_callback` can safely access it, and then when dropping
+    // the manager we make sure that `rust_callback` will never be called again before reboxing
+    // (and hence deallocating) the handler. See the `Drop` implementation for more details.
+    inner: *const InnerHandler,
 }
 
 impl Manager {
@@ -28,26 +28,28 @@ impl Manager {
     where
         T: Handler,
     {
-        let handler: Arc<InnerHandler> = Arc::new(Mutex::new(handler));
+        let inner = Box::into_raw(Box::new(Mutex::new(handler)));
+
         Ok(Manager {
             callback: robius_android_env::with_activity(|env, _| {
-                let callback = construct_callback(env, &handler)?;
+                let callback = construct_callback(env, inner)?;
                 env.new_global_ref(callback).map_err(|e| e.into())
             })
             .ok_or(Error::AndroidEnvironment)
             .and_then(|x| x)?,
-            _handler: handler,
+            inner,
         })
     }
 
-    pub fn request_authorization(&self) -> Result<()> {
-        // TODO: Block till authorization received?
+    pub fn request_authorization(&self, _access: Access, accuracy: Accuracy) -> Result<()> {
         robius_android_env::with_activity(|env, current_activity| {
-            // const COARSE_PERMISSION: &str = "android.permission.ACCESS_COARSE_LOCATION";
-            const FINE_PERMISSION: &str = "android.permission.ACCESS_FINE_LOCATION";
+            let permissions = env.new_string(match accuracy {
+                Accuracy::Approximate => "android.permission.ACCESS_COARSE_LOCATION",
+                Accuracy::Precise => "android.permission.ACCESS_FINE_LOCATION",
+            })?;
 
-            let permissions = env.new_string(FINE_PERMISSION)?;
             let array = env.new_object_array(1, "java/lang/String", permissions)?;
+            // TODO: Ideally we would provide functionality to wait for for authorization.
             let request_code = 3;
 
             env.call_method(
@@ -89,10 +91,6 @@ impl Manager {
     }
 
     pub fn start_updates(&self) -> Result<()> {
-        // TODO: What happens if user calls start_updates multiple times?
-
-        // TODO: NoClassDefFoundError for android/location/LocationListener$-CC
-
         robius_android_env::with_activity(|env, context| {
             let manager = get_location_manager(env, context)?;
             let provider = env.new_string("fused")?;
@@ -119,10 +117,6 @@ impl Manager {
     }
 
     pub fn stop_updates(&self) -> Result<()> {
-        // TODO: Request flush?
-
-        // TODO: What happens if user calls stop_updates prior to calling start_updates
-
         robius_android_env::with_activity(|env, context| {
             let manager = get_location_manager(env, context)?;
             env.call_method(
@@ -135,6 +129,49 @@ impl Manager {
         })
         .ok_or(Error::AndroidEnvironment)
         .and_then(|x| x)
+    }
+}
+
+impl Drop for Manager {
+    fn drop(&mut self) {
+        // NOTE: We want to unwrap in this function as otherwise could lead to memory
+        // unsafety.
+
+        // From https://developer.android.com/reference/android/location/LocationManager#removeUpdates(android.location.LocationListener):
+        // The given listener is guaranteed not to receive any invocations that
+        // happens-after this method is invoked.
+        self.stop_updates().unwrap();
+
+        // This is just to avoid some funky race conditions with the Java function. By
+        // using two variables we ensure that if our check happens to occur
+        // between the function start and `this.executing = true` (in e.g.
+        // `onLocationChanged`), `rustCallback` still won't be called. This could
+        // probably be done more efficiently in Rust using atomics.
+        robius_android_env::with_activity(|env, _| {
+            env.call_method(&self.callback, "disableExecution", "()V", &[])
+                .unwrap();
+        })
+        .unwrap();
+
+        // So now we are mostly ok to drop the handler except for the fact that a
+        // `rust_callback` invocation may currently be executing. Hence, we have to keep
+        // track of that (in Java).
+        let mut executing = true;
+
+        while executing {
+            executing = robius_android_env::with_activity(|env, _| {
+                env.call_method(&self.callback, "isExecuting", "()Z", &[])?
+                    .z()
+            })
+            .unwrap()
+            .unwrap();
+        }
+
+        // SAFETY: We have stopped updates and so `rust_callback` will never be invoked
+        // again. Moreover we have waited for any `rust_callback` invocations to
+        // finish executing. Hence, nothing else will ever touch the data behind
+        // this pointer and so we can safely deallocate it.
+        let _ = unsafe { Box::from_raw(self.inner as *mut InnerHandler) };
     }
 }
 
@@ -164,13 +201,12 @@ fn get_executor<'a>(env: &mut JNIEnv<'a>, context: &JObject<'_>) -> Result<JObje
 
 fn construct_callback<'a>(
     env: &mut JNIEnv<'a>,
-    handler: &Arc<InnerHandler>,
+    handler_ptr: *const InnerHandler,
 ) -> Result<JObject<'a>> {
     let callback_class = callback::get_callback_class(env)?;
 
-    let weak_ptr: *const InnerHandler = Arc::downgrade(handler).into_raw();
     // TODO: Is there a better way without the provenance API?
-    let transmuted: [i64; 2] = unsafe { std::mem::transmute(weak_ptr) };
+    let transmuted: [i64; 2] = unsafe { std::mem::transmute(handler_ptr) };
     env.new_object(
         callback_class,
         "(JJ)V",
@@ -187,7 +223,10 @@ fn construct_location_request<'a>(env: &mut JNIEnv<'a>) -> Result<JObject<'a>> {
         "android/location/LocationRequest$Builder",
         "(J)V",
         // TODO: Don't hardcode
-        &[JValueGen::Long(100)],
+        // TODO: Could use:
+        // https://developer.android.com/reference/android/location/LocationRequest#PASSIVE_INTERVAL
+        // but then we have to determine a minupdateinterval.
+        &[JValueGen::Long(1000)],
     )?;
 
     env.call_method(
@@ -257,8 +296,16 @@ impl Location<'_> {
         .and_then(|x| x)
     }
 
-    pub fn time(&self) {
-        todo!();
+    pub fn time(&self) -> Result<SystemTime> {
+        robius_android_env::with_activity(|env, _| {
+            match env.call_method(&self.inner, "getTime", "()J", &[])?.f() {
+                Ok(time) => Ok(time as f64),
+                Err(e) => Err(e.into()),
+            }
+        })
+        .ok_or(Error::AndroidEnvironment)
+        .and_then(|x| x)
+        .map(|secs| SystemTime::UNIX_EPOCH + Duration::from_secs_f64(secs))
     }
 }
 

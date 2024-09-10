@@ -13,36 +13,59 @@ import java.util.List;
  */
 
 public class LocationCallback implements Consumer<Location>, LocationListener {
-    private long weakPtrHigh;
-    private long weakPtrLow;
+    private long handlerPtrHigh;
+    private long handlerPtrLow;
+    private boolean executing;
+    private boolean doNotExecute;
 
     /*
      * The name and signature of this function must be kept in sync with `RUST_CALLBACK_NAME`, and
      * `RUST_CALLBACK_SIGNATURE` respectively.
      */
-    private native void rustCallback(long weakPtrHigh, long weakPtrLow, Location location);
+    private native void rustCallback(long handlerPtrHigh, long handlerPtrLow, Location location);
 
-    public LocationCallback(long weakPtrHigh, long weakPtrLow) {
-        this.weakPtrHigh = weakPtrHigh;
-        this.weakPtrLow = weakPtrLow;
+    public LocationCallback(long handlerPtrHigh, long handlerPtrLow) {
+        this.handlerPtrHigh = handlerPtrHigh;
+        this.handlerPtrLow = handlerPtrLow;
+	this.executing = false;
+	this.doNotExecute = false;
+    }
+
+    public boolean isExecuting() {
+	return this.executing;
+    }
+
+    public void disableExecution() {
+	this.doNotExecute = true;
     }
 
     public void accept(Location location) {
-        rustCallback(this.weakPtrHigh, this.weakPtrLow, location);
+        this.executing = true;
+	if (!this.doNotExecute) {
+            rustCallback(this.handlerPtrHigh, this.handlerPtrLow, location);
+	}
+	this.executing = false;
     }
 
     public void onLocationChanged(Location location) {
-        rustCallback(this.weakPtrHigh, this.weakPtrLow, location);
+        this.executing = true;
+	if (!this.doNotExecute) {
+            rustCallback(this.handlerPtrHigh, this.handlerPtrLow, location);
+	}
+	this.executing = false;
     }
 
-    // TODO: Override annotations?
-
-    // TODO: Explain why we need this.
-
-    // TODO: Implement other default methods?
+    // NOTE: Technically implementing this function shouldn't be necessary as it has a default implementation
+    // but if we don't we get the following error 🤷:
+    //
+    // NoClassDefFoundError for android/location/LocationListener$-CC
     public void onLocationChanged(List<Location> locations) {
-        for (Location location : locations) {
-        rustCallback(this.weakPtrHigh, this.weakPtrLow, location);
-        }
+	this.executing = true;
+	if (!this.doNotExecute) {
+            for (Location location : locations) {
+                rustCallback(this.handlerPtrHigh, this.handlerPtrLow, location);
+            }
+	}
+	this.executing = false;
     }
 }

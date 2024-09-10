@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::{Coordinates, Handler, Result};
+use crate::{Access, Accuracy, Coordinates, Handler, Result};
 
 pub(crate) struct Manager;
 
@@ -12,7 +12,7 @@ impl Manager {
         Ok(Self)
     }
 
-    pub fn request_authorization(&self) -> Result<()> {
+    pub fn request_authorization(&self, _access: Access, _accuracy: Accuracy) -> Result<()> {
         Ok(())
     }
 

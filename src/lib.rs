@@ -1,15 +1,17 @@
-// TODO
-#![feature(trivial_bounds)]
+//! A library to access system location data.
 
 mod error;
 mod sys;
 
+use std::time::SystemTime;
+
 pub use crate::error::{Error, Result};
 
-/// TODO: Document
+/// A manager for the location
 ///
-/// When the manager is dropped, the handler is no longer guaranteed to receive
-/// updates.
+/// As soon as the handler is registered it may receive updates, even if
+/// `update_once` or `start_updates` aren't called. When the manager is dropped,
+/// the handler will no longer guaranteed to receive updates.
 pub struct Manager {
     inner: sys::Manager,
 }
@@ -24,29 +26,42 @@ impl Manager {
         })
     }
 
-    pub fn request_authorization(&self) -> Result<()> {
-        self.inner.request_authorization()
+    /// Requests authorization to access location data.
+    ///
+    /// This will return immediately and request authorization in the background.
+    pub fn request_authorization(&self, access: Access, accuracy: Accuracy) -> Result<()> {
+        self.inner.request_authorization(access, accuracy)
     }
 
+    /// Delivers a single update to the handler.
     pub fn update_once(&self) -> Result<()> {
         self.inner.update_once()
     }
 
+    /// Begins delivering continuous updates to the handler.
     pub fn start_updates(&mut self) -> Result<()> {
         self.inner.start_updates()
     }
 
+    /// Stops delivering continuous updates to the handler.
     pub fn stop_updates(&mut self) -> Result<()> {
         self.inner.stop_updates()
     }
 }
 
-// TODO: Is Send necessary?
+/// A handler that handles location events and errors.
+///
+/// The handler should be registered with [`Manager::new`].
 pub trait Handler: 'static + Send + Sync {
     fn handle(&self, location: Location<'_>);
+
     fn error(&self, error: Error);
 }
 
+/// Data about the device's current whereabouts.
+///
+/// Despite the name, `Location` contains more than just the location of the
+/// device. See the methods for all available information.
 pub struct Location<'a> {
     inner: sys::Location<'a>,
 }
@@ -71,11 +86,12 @@ impl Location<'_> {
         self.inner.speed()
     }
 
-    pub fn time(&self) {
+    /// The time at which the location was acquired.
+    ///
+    /// This is not currently supported on Windows.
+    pub fn time(&self) -> Result<SystemTime> {
         self.inner.time()
     }
-
-    // TODO: Accuracies
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -85,13 +101,13 @@ pub struct Coordinates {
 }
 
 #[derive(Copy, Clone, Debug)]
-pub enum Accuracy {
-    Approximate,
-    Precise,
+pub enum Access {
+    Foreground,
+    Background,
 }
 
 #[derive(Copy, Clone, Debug)]
-pub enum Category {
-    Foreground,
-    Background,
+pub enum Accuracy {
+    Approximate,
+    Precise,
 }

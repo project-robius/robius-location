@@ -1,14 +1,14 @@
 mod delegate;
 
+use std::time::{Duration, SystemTime};
+
 use delegate::Delegate;
-use icrate::{
-    objc2::{rc::Id, runtime::ProtocolObject},
-    CoreLocation::{
-        CLLocation, CLLocationCoordinate2D, CLLocationManager, CLLocationManagerDelegate,
-    },
+use objc2::{rc::Id, runtime::ProtocolObject};
+use objc2_core_location::{
+    CLLocation, CLLocationCoordinate2D, CLLocationManager, CLLocationManagerDelegate,
 };
 
-use crate::{Coordinates, Handler, Result};
+use crate::{Access, Accuracy, Coordinates, Handler, Result};
 
 pub(crate) struct Manager {
     inner: Id<CLLocationManager>,
@@ -30,9 +30,11 @@ impl Manager {
         })
     }
 
-    pub(crate) fn request_authorization(&self) -> Result<()> {
-        unsafe { self.inner.requestAlwaysAuthorization() };
-        // TODO
+    pub(crate) fn request_authorization(&self, access: Access, _: Accuracy) -> Result<()> {
+        match access {
+            Access::Foreground => unsafe { self.inner.requestWhenInUseAuthorization() },
+            Access::Background => unsafe { self.inner.requestAlwaysAuthorization() },
+        }
         Ok(())
     }
 
@@ -81,9 +83,8 @@ impl Location<'_> {
         Ok(unsafe { self.inner.speed() })
     }
 
-    pub(crate) fn time(&self) {
-        todo!();
+    pub(crate) fn time(&self) -> Result<SystemTime> {
+        let secs = unsafe { self.inner.timestamp().timeIntervalSince1970() };
+        Ok(SystemTime::UNIX_EPOCH + Duration::from_secs_f64(secs))
     }
-
-    // TODO: Accuracies
 }

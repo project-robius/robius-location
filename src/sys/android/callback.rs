@@ -1,7 +1,4 @@
-use std::{
-    marker::PhantomData,
-    sync::{OnceLock, Weak},
-};
+use std::{marker::PhantomData, sync::OnceLock};
 
 use jni::{
     objects::{GlobalRef, JClass, JObject, JValueGen},
@@ -24,26 +21,27 @@ const RUST_CALLBACK_SIGNATURE: &str = "(JJLandroid/location/Location;)V";
 unsafe extern "C" fn rust_callback<'a>(
     env: JNIEnv<'a>,
     _: JObject<'a>,
-    weak_ptr_high: jlong,
-    weak_ptr_low: jlong,
+    handler_ptr_high: jlong,
+    handler_ptr_low: jlong,
     location: JObject<'a>,
 ) {
     // TODO: 32-bit? What's that?
+    #[cfg(not(target_pointer_width = "64"))]
+    compiler_error!("non-64-bit Android targets are not supported");
 
-    let weak_ptr: *const super::InnerHandler =
-        unsafe { std::mem::transmute([weak_ptr_high, weak_ptr_low]) };
-    let weak = unsafe { Weak::from_raw(weak_ptr) };
+    let handler_ptr: *const super::InnerHandler =
+        unsafe { std::mem::transmute([handler_ptr_high, handler_ptr_low]) };
+    // SAFETY: See `Drop` implementation for `sys::android::Manager`.
+    let handler = unsafe { &*handler_ptr };
 
-    if let Some(mutex) = weak.upgrade() {
-        if let Ok(handler) = mutex.lock() {
-            let location = crate::Location {
-                inner: super::Location {
-                    inner: env.new_global_ref(location).unwrap(),
-                    phantom: PhantomData,
-                },
-            };
-            handler.handle(location);
-        }
+    if let Ok(handler) = handler.lock() {
+        let location = crate::Location {
+            inner: super::Location {
+                inner: env.new_global_ref(location).unwrap(),
+                phantom: PhantomData,
+            },
+        };
+        handler.handle(location);
     }
 }
 

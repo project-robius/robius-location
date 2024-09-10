@@ -1,6 +1,7 @@
 use std::{
     marker::PhantomData,
     sync::{Arc, Mutex},
+    time::SystemTime,
 };
 
 use windows::{
@@ -10,14 +11,12 @@ use windows::{
     Foundation::{EventRegistrationToken, TypedEventHandler},
 };
 
-use crate::{Coordinates, Error, Handler, Result};
-
-// TODO: Remove status changed handler from geolocator when dropped?
+use crate::{Access, Accuracy, Coordinates, Error, Handler, Result};
 
 pub(crate) struct Manager {
     inner: Arc<Geolocator>,
     handler: TypedEventHandler<Geolocator, StatusChangedEventArgs>,
-    // TODO: Inefficient
+    // NOTE: Technically the Mutex isn't necessary, but removing it requires some finnicky unsafe.
     rust_handler: Arc<Mutex<dyn Handler>>,
     token: Option<EventRegistrationToken>,
 }
@@ -34,30 +33,35 @@ impl Manager {
         let event_handler: TypedEventHandler<Geolocator, StatusChangedEventArgs> =
             TypedEventHandler::new(
                 move |geolocator: &Option<Geolocator>, status: &Option<StatusChangedEventArgs>| {
-                    match status.as_ref() {
-                        Some(status) => match status.Status() {
-                            Ok(status) => match status {
-                                PositionStatus::Ready => {
-                                    // TODO: unwrap?
-                                    let geolocator = geolocator.as_ref().unwrap();
-                                    if let Ok(handler) = rust_handler_cloned.lock() {
-                                        if let Ok(location) = get_location(geolocator) {
-                                            handler.handle(location)
+                    if let Ok(handler) = rust_handler_cloned.lock() {
+                        match status.as_ref() {
+                            Some(status) => match status.Status() {
+                                Ok(status) => match status {
+                                    PositionStatus::Ready => {
+                                        if let Some(geolocator) = geolocator.as_ref() {
+                                            if let Ok(location) = get_location(geolocator) {
+                                                handler.handle(location)
+                                            }
+                                        } else {
+                                            handler.error(Error::Unknown);
                                         }
                                     }
-                                }
-                                PositionStatus::Initializing => {}
-                                PositionStatus::NoData => {}
-                                PositionStatus::Disabled => {}
-                                PositionStatus::NotInitialized => {}
-                                PositionStatus::NotAvailable => {}
-                                _ => todo!(),
+                                    PositionStatus::Initializing => {}
+                                    PositionStatus::NoData => {
+                                        handler.error(Error::TemporarilyUnavailable)
+                                    }
+                                    PositionStatus::Disabled => {
+                                        handler.error(Error::AuthorizationDenied)
+                                    }
+                                    // PositionStatus::NotInitialized => {}
+                                    PositionStatus::NotAvailable => {
+                                        handler.error(Error::PermanentlyUnavailable)
+                                    }
+                                    _ => handler.error(Error::Unknown),
+                                },
+                                Err(_) => handler.error(Error::Unknown),
                             },
-                            Err(_) => todo!(),
-                        },
-                        // TODO
-                        None => {
-                            todo!();
+                            None => handler.error(Error::Unknown),
                         }
                     }
 
@@ -73,9 +77,7 @@ impl Manager {
         })
     }
 
-    pub fn request_authorization(&self) -> Result<()> {
-        // TODO: Could do an async API, but like :shrug:. No other platform has async
-        // and this should only be run once per program.
+    pub fn request_authorization(&self, _access: Access, _accuracy: Accuracy) -> Result<()> {
         match Geolocator::RequestAccessAsync()?.get()? {
             GeolocationAccessStatus::Allowed => Ok(()),
             GeolocationAccessStatus::Denied => Err(Error::AuthorizationDenied),
@@ -91,11 +93,11 @@ impl Manager {
         use tokio::task::spawn_blocking as spawn;
 
         let handler = self.rust_handler.clone();
-        let inner = SyncGeolocator(self.inner.clone());
+        let inner_cloned = self.inner.clone();
 
         spawn(move || {
             if let Ok(handler) = handler.lock() {
-                if let Ok(location) = get_location(inner.0.as_ref()) {
+                if let Ok(location) = get_location(inner_cloned.as_ref()) {
                     handler.handle(location)
                 }
             }
@@ -115,6 +117,12 @@ impl Manager {
             self.inner.RemoveStatusChanged(token)?;
         }
         Ok(())
+    }
+}
+
+impl Drop for Manager {
+    fn drop(&mut self) {
+        let _ = self.stop_updates();
     }
 }
 
@@ -143,8 +151,18 @@ impl Location<'_> {
         self.inner.Speed()?.Value().map_err(|e| e.into())
     }
 
-    pub fn time(&self) {
-        unimplemented!();
+    pub fn time(&self) -> Result<SystemTime> {
+        // TODO
+        // Of the form:
+        // https://learn.microsoft.com/en-us/windows/win32/api/minwinbase/ns-minwinbase-systemtime
+        // which is non-trivial to convert to unix time so that we can convert to
+        // SystemTime let _ = self
+        //     .inner
+        //     .Timestamp()?
+        //     .UniversalTime
+        //     .try_into()
+        //     .map_err(|_| Error::Unknown)?;
+        Err(Error::Unknown)
     }
 }
 
@@ -156,13 +174,6 @@ fn get_location(geolocator: &Geolocator) -> Result<crate::Location> {
         },
     })
 }
-
-struct SyncGeolocator(Arc<Geolocator>);
-
-// TODO FIXME: This API is thread-safe right?
-// TODO: Safety
-unsafe impl Send for SyncGeolocator {}
-unsafe impl Sync for SyncGeolocator {}
 
 impl From<windows::core::Error> for Error {
     fn from(_: windows::core::Error) -> Self {

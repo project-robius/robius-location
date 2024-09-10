@@ -1,15 +1,13 @@
-use icrate::{
-    objc2::{
-        declare_class, msg_send_id, mutability,
-        rc::{Allocated, Id},
-        ClassType, DeclaredClass,
-    },
-    CoreLocation::{CLLocation, CLLocationManager, CLLocationManagerDelegate},
-    Foundation::{NSArray, NSError, NSObject, NSObjectProtocol},
+use objc2::{
+    declare_class, msg_send_id, mutability,
+    rc::{Allocated, Id},
+    ClassType, DeclaredClass,
 };
+use objc2_core_location::{CLLocation, CLLocationManager, CLLocationManagerDelegate};
+use objc2_foundation::{NSArray, NSError, NSObject, NSObjectProtocol};
 
 use super::Location;
-use crate::Handler;
+use crate::{Error, Handler};
 
 type InnerHandler = dyn Handler;
 
@@ -33,7 +31,6 @@ declare_class!(
     unsafe impl Delegate {
         #[method_id(initWithHandler:)]
         fn init_with(this: Allocated<Self>, cursed: [usize; 2]) -> Option<Id<Self>> {
-            // FIXME TODO NOTE XXX: :P
             let ptr: *mut InnerHandler = unsafe { std::mem::transmute(cursed) };
             let this = this.set_ivars(Ivars {
                 handler: unsafe { Box::from_raw(ptr) },
@@ -52,19 +49,28 @@ declare_class!(
             _: &CLLocationManager,
             locations: &NSArray<CLLocation>,
         ) {
-            for location in locations {
+            for i in 0..locations.len() {
                 self.ivars().handler.handle(crate::Location {
                     inner: Location {
-                        inner: location,
+                        // IDK why NSArray: IntoIterator doesn't work.
+                        inner: locations.get(i).unwrap(),
                     },
                 });
             }
         }
 
         #[method(locationManager:didFailWithError:)]
-        fn locationManager_didFailWithError(&self, _: &CLLocationManager, _: &NSError) {
-            // TODO: Match on error
-            self.ivars().handler.error(crate::Error::Unknown)
+        fn locationManager_didFailWithError(&self, _: &CLLocationManager, error: &NSError) {
+            // https://github.com/theos/sdks/blob/ca52092676249546f08657d4fc0c8beb26a80510/iPhoneOS9.3.sdk/System/Library/Frameworks/CoreLocation.framework/Headers/CLError.h#L32
+            self.ivars().handler.error(match error.code() {
+                // kCLErrorLocationUnknown
+                0 => Error::TemporarilyUnavailable,
+                // kCLErrorDenied
+                1 => Error::AuthorizationDenied,
+                // kCLErrorNetwork
+                2 => Error::Network,
+                _ => Error::Unknown,
+            })
         }
     }
 );
