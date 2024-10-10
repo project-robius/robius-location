@@ -1,7 +1,7 @@
 pub type Result<T> = std::result::Result<T, Error>;
 
 /// An error that can occur when fetching the location.
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum Error {
     /// An error occured with the Android Java environment.
     AndroidEnvironment,
