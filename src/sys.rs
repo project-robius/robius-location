@@ -8,6 +8,9 @@ cfg_if::cfg_if! {
     } else if #[cfg(target_os = "windows")] {
         mod windows;
         pub(crate) use windows::*;
+    } else if #[cfg(target_os = "linux")] {
+        mod linux;
+        pub(crate) use linux::*;
     } else {
         mod unsupported;
         pub(crate) use unsupported::*;
