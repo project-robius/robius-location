@@ -35,7 +35,7 @@ impl Manager {
                 let callback = construct_callback(env, inner)?;
                 env.new_global_ref(callback).map_err(|e| e.into())
             })
-            .ok_or(Error::AndroidEnvironment)
+            .map_err(|_| Error::AndroidEnvironment)
             .and_then(|x| x)?,
             inner,
         })
@@ -61,7 +61,7 @@ impl Manager {
 
             Ok(())
         })
-        .ok_or(Error::AndroidEnvironment)
+        .map_err(|_| Error::AndroidEnvironment)
         .and_then(|x| x)
     }
 
@@ -86,7 +86,7 @@ impl Manager {
 
             Ok(())
         })
-        .ok_or(Error::AndroidEnvironment)
+        .map_err(|_| Error::AndroidEnvironment)
         .and_then(|x| x)
     }
 
@@ -112,7 +112,7 @@ impl Manager {
 
             Ok(())
         })
-        .ok_or(Error::AndroidEnvironment)
+        .map_err(|_| Error::AndroidEnvironment)
         .and_then(|x| x)
     }
 
@@ -127,7 +127,7 @@ impl Manager {
             )?;
             Ok(())
         })
-        .ok_or(Error::AndroidEnvironment)
+        .map_err(|_| Error::AndroidEnvironment)
         .and_then(|x| x)
     }
 }
@@ -259,7 +259,7 @@ impl Location<'_> {
                 longitude,
             })
         })
-        .ok_or(Error::AndroidEnvironment)
+        .map_err(|_| Error::AndroidEnvironment)
         // Poor man's `flatten`
         .and_then(|x| x)
     }
@@ -270,7 +270,7 @@ impl Location<'_> {
                 .d()
                 .map_err(|e| e.into())
         })
-        .ok_or(Error::AndroidEnvironment)
+        .map_err(|_| Error::AndroidEnvironment)
         .and_then(|x| x)
     }
 
@@ -281,7 +281,7 @@ impl Location<'_> {
                 Err(e) => Err(e.into()),
             }
         })
-        .ok_or(Error::AndroidEnvironment)
+        .map_err(|_| Error::AndroidEnvironment)
         .and_then(|x| x)
     }
 
@@ -292,7 +292,7 @@ impl Location<'_> {
                 Err(e) => Err(e.into()),
             }
         })
-        .ok_or(Error::AndroidEnvironment)
+        .map_err(|_| Error::AndroidEnvironment)
         .and_then(|x| x)
     }
 
@@ -303,7 +303,7 @@ impl Location<'_> {
                 Err(e) => Err(e.into()),
             }
         })
-        .ok_or(Error::AndroidEnvironment)
+        .map_err(|_| Error::AndroidEnvironment)
         .and_then(|x| x)
         .map(|secs| SystemTime::UNIX_EPOCH + Duration::from_secs_f64(secs))
     }
