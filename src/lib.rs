@@ -1,4 +1,20 @@
 //! A library to access system location data.
+//!
+//! ## Android
+//!
+//! On Android the following must be added to the manifest:
+//! ```xml
+//! <manifest ... >
+//!   <!-- Always include this permission -->
+//!   <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+//!
+//!   <!-- Include only if your app benefits from precise location access. -->
+//!   <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+//! </manifest>
+//! ```
+//! As specified in the [Android documentation][android-docs].
+//!
+//! [android-docs]: https://developer.android.com/develop/sensors-and-location/location/permissions
 
 mod error;
 mod sys;
@@ -100,14 +116,26 @@ pub struct Coordinates {
     pub longitude: f64,
 }
 
+/// The kind of location access.
 #[derive(Copy, Clone, Debug)]
 pub enum Access {
     Foreground,
     Background,
 }
 
+/// The accuracy of the location data.
 #[derive(Copy, Clone, Debug)]
 pub enum Accuracy {
+    /// Approximate location accuracy.
+    ///
+    /// Corresponds to
+    /// [`ACCESS_COARSE_LOCATION`](https://developer.android.com/reference/android/Manifest.permission#ACCESS_COARSE_LOCATION)
+    /// on Android.
     Approximate,
+    /// Precise location accuracy.
+    ///
+    /// Corresponds to
+    /// [`ACCESS_FINE_LOCATION`](https://developer.android.com/reference/android/Manifest.permission#ACCESS_FINE_LOCATION)
+    /// on Android.
     Precise,
 }
