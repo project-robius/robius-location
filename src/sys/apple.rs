@@ -2,8 +2,8 @@ mod delegate;
 
 use std::time::{Duration, SystemTime};
 
-use delegate::Delegate;
-use objc2::{rc::Id, runtime::ProtocolObject};
+use delegate::RobiusLocationDelegate as Delegate;
+use objc2::{rc::Retained, runtime::ProtocolObject};
 use objc2_core_location::{
     CLLocation, CLLocationCoordinate2D, CLLocationManager, CLLocationManagerDelegate,
 };
@@ -11,9 +11,9 @@ use objc2_core_location::{
 use crate::{Access, Accuracy, Coordinates, Handler, Result};
 
 pub(crate) struct Manager {
-    inner: Id<CLLocationManager>,
-    // We don't want to drop the handler until the manager is dropped.
-    _delegate: Id<ProtocolObject<dyn CLLocationManagerDelegate>>,
+    inner: Retained<CLLocationManager>,
+    // We must not to drop the Delegate/handler until the manager itself is dropped.
+    _delegate: Retained<ProtocolObject<dyn CLLocationManagerDelegate>>,
 }
 
 impl Manager {
@@ -22,7 +22,7 @@ impl Manager {
         T: Handler,
     {
         let inner = unsafe { CLLocationManager::new() };
-        let delegate = ProtocolObject::from_id(Delegate::new(handler));
+        let delegate = ProtocolObject::from_retained(Delegate::new(handler));
         unsafe { inner.setDelegate(Some(&delegate)) };
         Ok(Self {
             inner,
@@ -32,24 +32,24 @@ impl Manager {
 
     pub(crate) fn request_authorization(&self, access: Access, _: Accuracy) -> Result<()> {
         match access {
-            Access::Foreground => unsafe { self.inner.requestWhenInUseAuthorization() },
-            Access::Background => unsafe { self.inner.requestAlwaysAuthorization() },
+            Access::Foreground => unsafe { self.inner.requestWhenInUseAuthorization(); },
+            Access::Background => unsafe { self.inner.requestAlwaysAuthorization(); },
         }
         Ok(())
     }
 
     pub(crate) fn update_once(&self) -> Result<()> {
-        unsafe { self.inner.requestLocation() };
+        unsafe { self.inner.requestLocation(); }
         Ok(())
     }
 
     pub(crate) fn start_updates(&self) -> Result<()> {
-        unsafe { self.inner.startUpdatingLocation() }
+        unsafe { self.inner.startUpdatingLocation(); }
         Ok(())
     }
 
     pub(crate) fn stop_updates(&self) -> Result<()> {
-        unsafe { self.inner.stopUpdatingLocation() }
+        unsafe { self.inner.stopUpdatingLocation(); }
         Ok(())
     }
 }
