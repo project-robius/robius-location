@@ -9,6 +9,8 @@ pub enum Error {
     AuthorizationDenied,
     /// A network error occured.
     Network,
+    /// The function was not called from the main thread.
+    NotMainThread,
     /// Location data is temporarily unavailable.
     TemporarilyUnavailable,
     /// This device does not support location data.

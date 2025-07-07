@@ -33,6 +33,9 @@ pub struct Manager {
 }
 
 impl Manager {
+    /// Creates a new location manager with the given handler.
+    ///
+    /// This **must** be called from the main thread due to platform restrictions.
     pub fn new<T>(handler: T) -> Result<Self>
     where
         T: Handler,

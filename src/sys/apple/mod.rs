@@ -21,8 +21,12 @@ impl Manager {
     where
         T: Handler,
     {
+        // Although `CLLocationManager::new()` does not require a MainThreadMarker,
+        // it actually does require that it is initialized from the main thread.
+        let mtm = objc2::MainThreadMarker::new()
+            .ok_or(crate::Error::NotMainThread)?;
         let inner = unsafe { CLLocationManager::new() };
-        let delegate = ProtocolObject::from_retained(Delegate::new(handler));
+        let delegate = ProtocolObject::from_retained(Delegate::new(mtm, handler));
         unsafe { inner.setDelegate(Some(&delegate)) };
         Ok(Self {
             inner,
