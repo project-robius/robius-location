@@ -1,3 +1,5 @@
+# Archived: this has moved to https://github.com/project-robius/robius
+
 # `robius-location`
 
 A library to access system location data.
