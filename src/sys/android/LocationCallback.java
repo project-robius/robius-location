@@ -27,32 +27,32 @@ public class LocationCallback implements Consumer<Location>, LocationListener {
     public LocationCallback(long handlerPtrHigh, long handlerPtrLow) {
         this.handlerPtrHigh = handlerPtrHigh;
         this.handlerPtrLow = handlerPtrLow;
-	this.executing = false;
-	this.doNotExecute = false;
+        this.executing = false;
+        this.doNotExecute = false;
     }
 
     public boolean isExecuting() {
-	return this.executing;
+        return this.executing;
     }
 
     public void disableExecution() {
-	this.doNotExecute = true;
+        this.doNotExecute = true;
     }
 
     public void accept(Location location) {
         this.executing = true;
-	if (!this.doNotExecute) {
-            rustCallback(this.handlerPtrHigh, this.handlerPtrLow, location);
-	}
-	this.executing = false;
+        if (!this.doNotExecute) {
+                rustCallback(this.handlerPtrHigh, this.handlerPtrLow, location);
+        }
+        this.executing = false;
     }
 
     public void onLocationChanged(Location location) {
         this.executing = true;
-	if (!this.doNotExecute) {
-            rustCallback(this.handlerPtrHigh, this.handlerPtrLow, location);
-	}
-	this.executing = false;
+        if (!this.doNotExecute) {
+                rustCallback(this.handlerPtrHigh, this.handlerPtrLow, location);
+        }
+        this.executing = false;
     }
 
     // NOTE: Technically implementing this function shouldn't be necessary as it has a default implementation
@@ -60,12 +60,12 @@ public class LocationCallback implements Consumer<Location>, LocationListener {
     //
     // NoClassDefFoundError for android/location/LocationListener$-CC
     public void onLocationChanged(List<Location> locations) {
-	this.executing = true;
-	if (!this.doNotExecute) {
-            for (Location location : locations) {
-                rustCallback(this.handlerPtrHigh, this.handlerPtrLow, location);
-            }
-	}
-	this.executing = false;
+        this.executing = true;
+        if (!this.doNotExecute) {
+                for (Location location : locations) {
+                    rustCallback(this.handlerPtrHigh, this.handlerPtrLow, location);
+                }
+        }
+        this.executing = false;
     }
 }

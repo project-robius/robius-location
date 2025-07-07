@@ -9,23 +9,23 @@ impl Manager {
     where
         T: Handler,
     {
-        Ok(Self)
+        Err(Error::Unknown)
     }
 
     pub fn request_authorization(&self, _access: Access, _accuracy: Accuracy) -> Result<()> {
-        Ok(())
+        Err(Error::Unknown)
     }
 
     pub fn update_once(&self) -> Result<()> {
-        Ok(())
+        Err(Error::Unknown)
     }
 
     pub fn start_updates(&self) -> Result<()> {
-        Ok(())
+        Err(Error::Unknown)
     }
 
     pub fn stop_updates(&self) -> Result<()> {
-        Ok(())
+        Err(Error::Unknown)
     }
 }
 
@@ -35,22 +35,22 @@ pub struct Location<'a> {
 
 impl Location<'_> {
     pub fn coordinates(&self) -> Result<Coordinates> {
-        unimplemented!();
+        Err(Error::Unknown)
     }
 
     pub fn altitude(&self) -> Result<f64> {
-        unimplemented!();
+        Err(Error::Unknown)
     }
 
     pub fn bearing(&self) -> Result<f64> {
-        unimplemented!();
+        Err(Error::Unknown)
     }
 
     pub fn speed(&self) -> Result<f64> {
-        unimplemented!();
+        Err(Error::Unknown)
     }
 
-    pub fn time(&self) {
-        unimplemented!();
+    pub fn time(&self) -> Result<SystemTime> {
+        Err(Error::Unknown)
     }
 }

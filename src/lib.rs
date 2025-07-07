@@ -23,16 +23,21 @@ use std::time::SystemTime;
 
 pub use crate::error::{Error, Result};
 
-/// A manager for the location
+/// A manager for dealing with location data and handling location updates.
 ///
-/// As soon as the handler is registered it may receive updates, even if
-/// `update_once` or `start_updates` aren't called. When the manager is dropped,
-/// the handler will no longer guaranteed to receive updates.
+/// **All location manager functions must be called from the main thread**.
+///
+/// As soon as the handler is registered, it may receive updates immediatly,
+/// even if `update_once` or `start_updates` are not called.
+/// When the manager is dropped, the handler is no longer guaranteed to receive updates.
 pub struct Manager {
     inner: sys::Manager,
 }
 
 impl Manager {
+    /// Creates a new location manager with the given handler.
+    ///
+    /// This **must** be called from the main thread due to platform restrictions.
     pub fn new<T>(handler: T) -> Result<Self>
     where
         T: Handler,
